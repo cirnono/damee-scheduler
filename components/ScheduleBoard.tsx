@@ -17,10 +17,12 @@ import {
     type WeekdayKey,
 } from "@/lib/scheduler-config";
 import type { Employee, ScheduleCell } from "@/lib/types";
+import type { WeekDateInfo } from "@/lib/date-utils";
 
 type ScheduleBoardProps = {
     roleGroups: RoleGroupConfig[];
     roles: string[];
+    weekDates: WeekDateInfo[];
     employees: Employee[];
     cells: ScheduleCell[];
     onAssignEmployee: (
@@ -417,6 +419,7 @@ export function ScheduleBoard({
     roles,
     employees,
     cells,
+    weekDates,
     onAssignEmployee,
     onMoveScheduleEmployee,
     onToggleCellLock,
@@ -585,7 +588,7 @@ export function ScheduleBoard({
                 </section>
 
                 <section className="grid gap-4 lg:grid-cols-7">
-                    {WEEKDAYS.map((day) => (
+                    {weekDates.map((day) => (
                         <div
                             key={day.key}
                             className={
@@ -610,7 +613,12 @@ export function ScheduleBoard({
                                         : "mb-4 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-lg font-semibold text-amber-700 hover:bg-amber-50"
                                 }
                             >
-                                <span>{day.label}</span>
+                                <span>
+                                    {day.label}
+                                    <span className="ml-2 text-sm font-normal text-neutral-500">
+                                        {day.dateLabel}
+                                    </span>
+                                </span>
                                 <span className="text-xs font-normal text-neutral-500">
                                     {highlightedDay === day.key
                                         ? "取消高亮"

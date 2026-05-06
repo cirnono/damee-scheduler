@@ -35,6 +35,8 @@ export type SchedulePlan = {
 
 export type SchedulePlanMap = Record<string, SchedulePlan>;
 
+export type SchedulePlansByWeek = Record<string, SchedulePlanMap>;
+
 export type StoreEmployeeMap = Record<string, string[]>;
 
 export type SchedulerBackup = {
@@ -43,7 +45,7 @@ export type SchedulerBackup = {
     employeePool: Employee[];
     storeEmployeeIds: StoreEmployeeMap;
     storeRules: StoreRuleMap;
-    schedulePlans: SchedulePlanMap;
+    schedulePlansByWeek: SchedulePlansByWeek;
     activeStoreId: string;
     activePlanId: string;
 };

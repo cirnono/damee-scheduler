@@ -1,5 +1,6 @@
 import { WEEKDAYS, type WeekdayKey } from "./scheduler-config";
 import type { Employee, ScheduleCell } from "./types";
+import type { WeekDateInfo } from "./date-utils";
 
 export type ScheduleTextFormat = "wechat-compact" | "by-date" | "by-employee";
 
@@ -9,6 +10,7 @@ type BuildScheduleTextParams = {
     roles: string[];
     employees: Employee[];
     cells: ScheduleCell[];
+    weekDates?: WeekDateInfo[];
     format?: ScheduleTextFormat;
 };
 
@@ -25,6 +27,18 @@ function getCell(cells: ScheduleCell[], day: WeekdayKey, role: string) {
     return cells.find((cell) => cell.day === day && cell.role === role);
 }
 
+function getExportWeekDates(weekDates?: WeekDateInfo[]) {
+    return (
+        weekDates ??
+        WEEKDAYS.map((day) => ({
+            ...day,
+            date: "",
+            dateLabel: "",
+            fullLabel: day.label,
+        }))
+    );
+}
+
 function getEmployeeAssignedCells(employeeId: string, cells: ScheduleCell[]) {
     return cells.filter((cell) => cell.employeeId === employeeId);
 }
@@ -35,13 +49,19 @@ function buildWechatCompactText({
     roles,
     employees,
     cells,
+    weekDates,
 }: Required<BuildScheduleTextParams>) {
     const lines: string[] = [];
 
-    lines.push(`${storeName} ${planName} 排班`);
+    const firstDate = weekDates[0]?.dateLabel;
+    const lastDate = weekDates[6]?.dateLabel;
+
+    lines.push(
+        `${storeName} ${planName} 排班${firstDate && lastDate ? `（${firstDate}-${lastDate}）` : ""}`,
+    );
     lines.push("");
 
-    for (const day of WEEKDAYS) {
+    for (const day of getExportWeekDates(weekDates)) {
         const assignedTexts = roles.map((role) => {
             const cell = getCell(cells, day.key, role);
             const employeeName = getEmployeeName(
@@ -52,7 +72,7 @@ function buildWechatCompactText({
             return `${role}：${employeeName}`;
         });
 
-        lines.push(`${day.label}`);
+        lines.push(`${day.fullLabel}`);
         lines.push(assignedTexts.join("，"));
         lines.push("");
     }
@@ -66,14 +86,20 @@ function buildByDateText({
     roles,
     employees,
     cells,
+    weekDates,
 }: Required<BuildScheduleTextParams>) {
     const lines: string[] = [];
 
-    lines.push(`${planName} - ${storeName} 排班表`);
+    const firstDate = weekDates[0]?.dateLabel;
+    const lastDate = weekDates[6]?.dateLabel;
+
+    lines.push(
+        `${planName} - ${storeName} 排班表${firstDate && lastDate ? `（${firstDate}-${lastDate}）` : ""}`,
+    );
     lines.push("");
 
-    for (const day of WEEKDAYS) {
-        lines.push(`【${day.label}】`);
+    for (const day of getExportWeekDates(weekDates)) {
+        lines.push(`【${day.fullLabel}】`);
 
         for (const role of roles) {
             const cell = getCell(cells, day.key, role);
@@ -97,10 +123,16 @@ function buildByEmployeeText({
     planName,
     employees,
     cells,
+    weekDates,
 }: Required<BuildScheduleTextParams>) {
     const lines: string[] = [];
 
-    lines.push(`${planName} - ${storeName} 员工排班`);
+    const firstDate = weekDates[0]?.dateLabel;
+    const lastDate = weekDates[6]?.dateLabel;
+
+    lines.push(
+        `${planName} - ${storeName} 员工排班${firstDate && lastDate ? `（${firstDate}-${lastDate}）` : ""}`,
+    );
     lines.push("");
 
     for (const employee of employees) {
@@ -111,15 +143,17 @@ function buildByEmployeeText({
             continue;
         }
 
-        const dayTexts = WEEKDAYS.map((day) => {
-            const roles = assignedCells
-                .filter((cell) => cell.day === day.key)
-                .map((cell) => cell.role);
+        const dayTexts = weekDates
+            .map((day) => {
+                const roles = assignedCells
+                    .filter((cell) => cell.day === day.key)
+                    .map((cell) => cell.role);
 
-            if (roles.length === 0) return null;
+                if (roles.length === 0) return null;
 
-            return `${day.shortLabel} ${roles.join("、")}`;
-        }).filter(Boolean);
+                return `${day.shortLabel}${day.dateLabel ? ` ${day.dateLabel}` : ""} ${roles.join("、")}`;
+            })
+            .filter(Boolean);
 
         lines.push(`${employee.name}：${dayTexts.join("；")}`);
     }
@@ -130,6 +164,7 @@ function buildByEmployeeText({
 export function buildScheduleText(params: BuildScheduleTextParams) {
     const fullParams: Required<BuildScheduleTextParams> = {
         ...params,
+        weekDates: params.weekDates ?? getExportWeekDates(),
         format: params.format ?? "wechat-compact",
     };
 
