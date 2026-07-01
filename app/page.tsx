@@ -35,6 +35,7 @@ import type {
     StoreEmployeeMap,
     StoreRuleMap,
 } from "@/lib/types";
+import { AuthGuard } from "@/components/AuthGuard";
 import { StoreRulesPanel } from "@/components/StoreRulesPanel";
 import {
     buildWeekDates,
@@ -850,6 +851,7 @@ export default function Home() {
     }
 
     return (
+        <AuthGuard>
         <main className="min-h-screen bg-neutral-950 text-neutral-50">
             <section className="mx-auto max-w-7xl px-6 py-8">
                 <header className="mb-8 flex flex-col gap-4 border-b border-neutral-800 pb-6 md:flex-row md:items-end md:justify-between">
@@ -1379,5 +1381,6 @@ export default function Home() {
                 ) : null}
             </section>
         </main>
+        </AuthGuard>
     );
 }
