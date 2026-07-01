@@ -77,6 +77,7 @@ type DroppableScheduleCellProps = {
     isDragOver: boolean;
     onClick: () => void;
     onToggleLock: () => void;
+    onRemoveEmployee: (day: WeekdayKey, role: string) => void;
 };
 
 function canEmployeeWorkOnDay(employee: Employee, day: WeekdayKey) {
@@ -310,6 +311,7 @@ function DroppableScheduleCell({
     isDragOver,
     onClick,
     onToggleLock,
+    onRemoveEmployee,
 }: DroppableScheduleCellProps) {
     const { setNodeRef } = useDroppable({
         id: `cell:${day}:${role}`,
@@ -380,12 +382,25 @@ function DroppableScheduleCell({
             </div>
 
             {employeeId ? (
-                <DraggableScheduledEmployee
-                    employeeId={employeeId}
-                    employeeName={employeeName}
-                    day={day}
-                    role={role}
-                />
+                <div className="group relative">
+                    <DraggableScheduledEmployee
+                        employeeId={employeeId}
+                        employeeName={employeeName}
+                        day={day}
+                        role={role}
+                    />
+                    <button
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onRemoveEmployee(day, role);
+                        }}
+                        className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white opacity-0 shadow transition hover:bg-red-400 group-hover:opacity-100"
+                        title="移除此员工"
+                    >
+                        ✕
+                    </button>
+                </div>
             ) : (
                 <p className="mt-1 text-sm font-medium text-red-300">未安排</p>
             )}
@@ -740,6 +755,16 @@ export function ScheduleBoard({
                                                                 onToggleCellLock(
                                                                     day.key,
                                                                     role,
+                                                                )
+                                                            }
+                                                            onRemoveEmployee={(
+                                                                d,
+                                                                r,
+                                                            ) =>
+                                                                onAssignEmployee(
+                                                                    d,
+                                                                    r,
+                                                                    null,
                                                                 )
                                                             }
                                                         />
