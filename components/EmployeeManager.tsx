@@ -12,6 +12,8 @@ type EmployeeManagerProps = {
     setEmployeePool: Dispatch<SetStateAction<Employee[]>>;
     activeStoreEmployeeIds: string[];
     setStoreEmployeeIds: Dispatch<SetStateAction<StoreEmployeeMap>>;
+    editOrder: Record<string, number>;
+    onEmployeeEdited: (employeeId: string) => void;
 };
 
 type RawEmployeeImport = {
@@ -39,6 +41,8 @@ export function EmployeeManager({
     setEmployeePool,
     activeStoreEmployeeIds,
     setStoreEmployeeIds,
+    editOrder,
+    onEmployeeEdited,
 }: EmployeeManagerProps) {
     const [newEmployeeName, setNewEmployeeName] = useState("");
     const [jsonInput, setJsonInput] = useState("");
@@ -47,6 +51,11 @@ export function EmployeeManager({
     const [filter, setFilter] = useState<EmployeeFilter>("all");
     const [expandedPreferenceEmployeeIds, setExpandedPreferenceEmployeeIds] =
         useState<string[]>([]);
+    const [jsonImportCollapsed, setJsonImportCollapsed] = useState(true);
+    const [filterCollapsed, setFilterCollapsed] = useState(true);
+    const [snapshotOrder] = useState<Record<string, number>>(() => ({
+        ...editOrder,
+    }));
 
     const activeStoreEmployeeIdSet = useMemo(
         () => new Set(activeStoreEmployeeIds),
@@ -76,9 +85,20 @@ export function EmployeeManager({
 
                 if (aInStore !== bInStore) return aInStore ? -1 : 1;
 
+                const aOrder = snapshotOrder[a.id] ?? 0;
+                const bOrder = snapshotOrder[b.id] ?? 0;
+
+                if (aOrder !== bOrder) return bOrder - aOrder;
+
                 return a.name.localeCompare(b.name, "zh-Hans-CN");
             });
-    }, [employeePool, activeStoreEmployeeIdSet, filter, searchKeyword]);
+    }, [
+        employeePool,
+        activeStoreEmployeeIdSet,
+        filter,
+        searchKeyword,
+        snapshotOrder,
+    ]);
 
     function addEmployeeIdToCurrentStore(employeeId: string) {
         setStoreEmployeeIds((current) => {
@@ -187,6 +207,8 @@ export function EmployeeManager({
         employeeId: string,
         updater: (employee: Employee) => Employee,
     ) {
+        onEmployeeEdited(employeeId);
+
         setEmployeePool((current) =>
             current.map((employee) => {
                 if (employee.id !== employeeId) return employee;
@@ -674,95 +696,140 @@ export function EmployeeManager({
 
             <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
-                    <h3 className="font-semibold text-neutral-100">
-                        JSON 批量导入到员工池
-                    </h3>
-                    <p className="mt-1 text-xs text-neutral-500">
-                        导入后会加入全局员工池，并自动勾选到当前门店。
-                    </p>
-
-                    <div className="mt-3">
-                        <button
-                            onClick={() => setJsonInput(sampleJson)}
-                            className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-900"
+                    <button
+                        onClick={() =>
+                            setJsonImportCollapsed((v) => !v)
+                        }
+                        className="flex w-full items-center justify-between"
+                    >
+                        <h3 className="font-semibold text-neutral-100">
+                            JSON 批量导入到员工池
+                        </h3>
+                        <span
+                            className={`text-neutral-400 text-lg transition-transform duration-200 ${
+                                jsonImportCollapsed ? "" : "rotate-90"
+                            }`}
                         >
-                            填入示例
-                        </button>
-                    </div>
+                            ▶
+                        </span>
+                    </button>
 
-                    <textarea
-                        value={jsonInput}
-                        onChange={(event) => setJsonInput(event.target.value)}
-                        placeholder={sampleJson}
-                        className="mt-3 min-h-44 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-4 py-3 font-mono text-xs text-neutral-100 outline-none placeholder:text-neutral-700 focus:border-amber-500"
-                    />
+                    {!jsonImportCollapsed && (
+                        <>
+                            <p className="mt-1 text-xs text-neutral-500">
+                                导入后会加入全局员工池，并自动勾选到当前门店。
+                            </p>
 
-                    {importError ? (
-                        <p className="mt-2 text-sm text-red-300">
-                            {importError}
-                        </p>
-                    ) : null}
+                            <div className="mt-3">
+                                <button
+                                    onClick={() => setJsonInput(sampleJson)}
+                                    className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-900"
+                                >
+                                    填入示例
+                                </button>
+                            </div>
 
-                    <div className="mt-3 flex justify-end">
-                        <button
-                            onClick={importEmployeesFromJson}
-                            className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400"
-                        >
-                            导入 JSON
-                        </button>
-                    </div>
+                            <textarea
+                                value={jsonInput}
+                                onChange={(event) =>
+                                    setJsonInput(event.target.value)
+                                }
+                                placeholder={sampleJson}
+                                className="mt-3 min-h-44 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-4 py-3 font-mono text-xs text-neutral-100 outline-none placeholder:text-neutral-700 focus:border-amber-500"
+                            />
+
+                            {importError ? (
+                                <p className="mt-2 text-sm text-red-300">
+                                    {importError}
+                                </p>
+                            ) : null}
+
+                            <div className="mt-3 flex justify-end">
+                                <button
+                                    onClick={importEmployeesFromJson}
+                                    className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400"
+                                >
+                                    导入 JSON
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
-                    <h3 className="font-semibold text-neutral-100">
-                        筛选员工池
-                    </h3>
-                    <p className="mt-1 text-xs text-neutral-500">
-                        用于快速从员工池里选择当前门店可用员工。
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap gap-3">
-                        <input
-                            value={searchKeyword}
-                            onChange={(event) =>
-                                setSearchKeyword(event.target.value)
-                            }
-                            placeholder="搜索员工姓名"
-                            className="w-56 rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-500"
-                        />
-
-                        <select
-                            value={filter}
-                            onChange={(event) =>
-                                setFilter(event.target.value as EmployeeFilter)
-                            }
-                            className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-2 text-sm text-neutral-100 outline-none focus:border-amber-500"
+                    <button
+                        onClick={() =>
+                            setFilterCollapsed((v) => !v)
+                        }
+                        className="flex w-full items-center justify-between"
+                    >
+                        <h3 className="font-semibold text-neutral-100">
+                            筛选员工池
+                        </h3>
+                        <span
+                            className={`text-neutral-400 text-lg transition-transform duration-200 ${
+                                filterCollapsed ? "" : "rotate-90"
+                            }`}
                         >
-                            <option value="all">全部员工</option>
-                            <option value="active-store">当前门店已选</option>
-                            <option value="not-active-store">
-                                当前门店未选
-                            </option>
-                        </select>
+                            ▶
+                        </span>
+                    </button>
 
-                        <button
-                            onClick={selectAllFilteredEmployeesForCurrentStore}
-                            className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-900"
-                        >
-                            当前筛选全选入门店
-                        </button>
+                    {!filterCollapsed && (
+                        <>
+                            <div className="mt-4 flex flex-wrap gap-3">
+                                <input
+                                    value={searchKeyword}
+                                    onChange={(event) =>
+                                        setSearchKeyword(event.target.value)
+                                    }
+                                    placeholder="搜索员工姓名"
+                                    className="w-56 rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-500"
+                                />
 
-                        <button
-                            onClick={removeAllFilteredEmployeesFromCurrentStore}
-                            className="rounded-xl border border-red-900/70 px-4 py-2 text-sm text-red-300 hover:bg-red-950/40"
-                        >
-                            当前筛选移出门店
-                        </button>
-                    </div>
+                                <select
+                                    value={filter}
+                                    onChange={(event) =>
+                                        setFilter(
+                                            event.target
+                                                .value as EmployeeFilter,
+                                        )
+                                    }
+                                    className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-2 text-sm text-neutral-100 outline-none focus:border-amber-500"
+                                >
+                                    <option value="all">全部员工</option>
+                                    <option value="active-store">
+                                        当前门店已选
+                                    </option>
+                                    <option value="not-active-store">
+                                        当前门店未选
+                                    </option>
+                                </select>
 
-                    <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-500">
-                        提示：员工是否愿意跨店不作为系统字段。使用者在这里勾选时自行判断。
-                    </div>
+                                <button
+                                    onClick={
+                                        selectAllFilteredEmployeesForCurrentStore
+                                    }
+                                    className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-900"
+                                >
+                                    当前筛选全选入门店
+                                </button>
+
+                                <button
+                                    onClick={
+                                        removeAllFilteredEmployeesFromCurrentStore
+                                    }
+                                    className="rounded-xl border border-red-900/70 px-4 py-2 text-sm text-red-300 hover:bg-red-950/40"
+                                >
+                                    当前筛选移出门店
+                                </button>
+                            </div>
+
+                            <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-500">
+                                提示：员工是否愿意跨店不作为系统字段。使用者在这里勾选时自行判断。
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
