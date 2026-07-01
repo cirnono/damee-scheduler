@@ -144,6 +144,17 @@ export default function Home() {
     const [showStatsPanel, setShowStatsPanel] = useState(false);
     const [showRulesPanel, setShowRulesPanel] = useState(false);
     const [copyPlanMessage, setCopyPlanMessage] = useState("");
+    const [editOrder, setEditOrder] = useState<Record<string, number>>({});
+    const editCounterRef = useRef(0);
+
+    function handleEmployeeEdited(employeeId: string) {
+        editCounterRef.current += 1;
+
+        setEditOrder((current) => ({
+            ...current,
+            [employeeId]: editCounterRef.current,
+        }));
+    }
 
     const [todayValue, setTodayValue] = useState("");
     const [weekStartDate, setWeekStartDate] = useState("");
@@ -1284,6 +1295,8 @@ export default function Home() {
                                 setEmployeePool={setEmployeePool}
                                 activeStoreEmployeeIds={activeStoreEmployeeIds}
                                 setStoreEmployeeIds={setStoreEmployeeIds}
+                                editOrder={editOrder}
+                                onEmployeeEdited={handleEmployeeEdited}
                             />
                         </div>
                     </div>

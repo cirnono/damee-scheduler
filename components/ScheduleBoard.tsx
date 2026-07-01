@@ -431,6 +431,7 @@ export function ScheduleBoard({
     const [highlightedDay, setHighlightedDay] = useState<WeekdayKey | null>(
         null,
     );
+    const [viewMode, setViewMode] = useState<"role" | "employee">("role");
 
     const selectedDay = WEEKDAYS.find((day) => day.key === selectedCell?.day);
 
@@ -460,6 +461,17 @@ export function ScheduleBoard({
 
     function getCell(dayKey: WeekdayKey, role: string) {
         return cells.find((cell) => cell.day === dayKey && cell.role === role);
+    }
+
+    function getEmployeeRoleOnDay(
+        employeeId: string,
+        day: WeekdayKey,
+    ): string | null {
+        const cell = cells.find(
+            (c) => c.employeeId === employeeId && c.day === day,
+        );
+
+        return cell?.role ?? null;
     }
 
     function handleAssign(employeeId: string | null) {
@@ -587,128 +599,251 @@ export function ScheduleBoard({
                     )}
                 </section>
 
-                <section className="grid gap-4 lg:grid-cols-7">
-                    {weekDates.map((day) => (
-                        <div
-                            key={day.key}
+                <div className="mb-5 flex items-center justify-center">
+                    <div className="inline-flex items-center gap-1 rounded-xl border border-neutral-700 bg-neutral-950 p-1">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode("role")}
                             className={
-                                draggingFromEmployeeBar &&
-                                draggedEmployeeAssignedDays.has(day.key)
-                                    ? "rounded-2xl border border-neutral-200 bg-neutral-100 p-4 opacity-45 shadow-xl shadow-black/20 transition"
-                                    : highlightedDay === day.key
-                                      ? "rounded-2xl border border-emerald-400 bg-emerald-50 p-4 shadow-xl shadow-black/20 transition"
-                                      : "rounded-2xl border border-neutral-800 bg-neutral-900/80 p-4 shadow-xl shadow-black/20 transition"
+                                viewMode === "role"
+                                    ? "rounded-lg bg-amber-500 px-4 py-1.5 text-sm font-semibold text-neutral-950"
+                                    : "rounded-lg px-4 py-1.5 text-sm text-neutral-400 hover:text-neutral-200"
                             }
                         >
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setHighlightedDay((current) =>
-                                        current === day.key ? null : day.key,
-                                    )
-                                }
+                            按岗位
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode("employee")}
+                            className={
+                                viewMode === "employee"
+                                    ? "rounded-lg bg-amber-500 px-4 py-1.5 text-sm font-semibold text-neutral-950"
+                                    : "rounded-lg px-4 py-1.5 text-sm text-neutral-400 hover:text-neutral-200"
+                            }
+                        >
+                            按人员
+                        </button>
+                    </div>
+                </div>
+
+                {viewMode === "role" && (
+                    <section className="grid gap-4 lg:grid-cols-7">
+                        {weekDates.map((day) => (
+                            <div
+                                key={day.key}
                                 className={
-                                    highlightedDay === day.key
-                                        ? "mb-4 flex w-full items-center justify-between rounded-xl bg-emerald-100 px-3 py-2 text-left text-lg font-semibold text-emerald-800"
-                                        : "mb-4 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-lg font-semibold text-amber-700 hover:bg-amber-50"
+                                    draggingFromEmployeeBar &&
+                                    draggedEmployeeAssignedDays.has(day.key)
+                                        ? "rounded-2xl border border-neutral-200 bg-neutral-100 p-4 opacity-45 shadow-xl shadow-black/20 transition"
+                                        : highlightedDay === day.key
+                                          ? "rounded-2xl border border-emerald-400 bg-emerald-50 p-4 shadow-xl shadow-black/20 transition"
+                                          : "rounded-2xl border border-neutral-800 bg-neutral-900/80 p-4 shadow-xl shadow-black/20 transition"
                                 }
                             >
-                                <span>
-                                    {day.label}
-                                    <span className="ml-2 text-sm font-normal text-neutral-500">
-                                        {day.dateLabel}
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setHighlightedDay((current) =>
+                                            current === day.key
+                                                ? null
+                                                : day.key,
+                                        )
+                                    }
+                                    className={
+                                        highlightedDay === day.key
+                                            ? "mb-4 flex w-full items-center justify-between rounded-xl bg-emerald-100 px-3 py-2 text-left text-lg font-semibold text-emerald-800"
+                                            : "mb-4 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-lg font-semibold text-amber-700 hover:bg-amber-50"
+                                    }
+                                >
+                                    <span>
+                                        {day.label}
+                                        <span className="ml-2 text-sm font-normal text-neutral-500">
+                                            {day.dateLabel}
+                                        </span>
                                     </span>
-                                </span>
-                                <span className="text-xs font-normal text-neutral-500">
-                                    {highlightedDay === day.key
-                                        ? "取消高亮"
-                                        : "查看未安排"}
-                                </span>
-                            </button>
+                                    <span className="text-xs font-normal text-neutral-500">
+                                        {highlightedDay === day.key
+                                            ? "取消高亮"
+                                            : "查看未安排"}
+                                    </span>
+                                </button>
 
-                            <div className="space-y-4">
-                                {roleGroups.map((group) => (
-                                    <div
-                                        key={group.id}
-                                        className="rounded-2xl border border-neutral-200 bg-white p-3"
-                                    >
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <h3 className="text-sm font-semibold text-neutral-700">
-                                                {group.name}
-                                            </h3>
-                                            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">
-                                                {group.roles.length} 岗
-                                            </span>
+                                <div className="space-y-4">
+                                    {roleGroups.map((group) => (
+                                        <div
+                                            key={group.id}
+                                            className="rounded-2xl border border-neutral-200 bg-white p-3"
+                                        >
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <h3 className="text-sm font-semibold text-neutral-700">
+                                                    {group.name}
+                                                </h3>
+                                                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">
+                                                    {group.roles.length} 岗
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                {group.roles.map((role) => {
+                                                    const cell = getCell(
+                                                        day.key,
+                                                        role,
+                                                    );
+                                                    const employeeId =
+                                                        cell?.employeeId ??
+                                                        null;
+                                                    const employeeName =
+                                                        getEmployeeName(
+                                                            employeeId,
+                                                        );
+                                                    const isEmpty =
+                                                        !employeeId;
+                                                    const locked =
+                                                        cell?.locked ?? false;
+
+                                                    const isDragOver =
+                                                        dragOverCell?.day ===
+                                                            day.key &&
+                                                        dragOverCell.role ===
+                                                            role;
+                                                    const dragged = getEmployee(
+                                                        draggedEmployee?.employeeId ??
+                                                            null,
+                                                    );
+                                                    const dragValidation =
+                                                        isDragOver && dragged
+                                                            ? getDragValidation(
+                                                                  dragged,
+                                                                  day.key,
+                                                                  role,
+                                                              )
+                                                            : null;
+
+                                                    return (
+                                                        <DroppableScheduleCell
+                                                            key={`${day.key}-${role}`}
+                                                            day={day.key}
+                                                            role={role}
+                                                            employeeId={
+                                                                employeeId
+                                                            }
+                                                            employeeName={
+                                                                employeeName
+                                                            }
+                                                            isEmpty={isEmpty}
+                                                            locked={locked}
+                                                            isDragOver={
+                                                                isDragOver
+                                                            }
+                                                            dragValidation={
+                                                                dragValidation
+                                                            }
+                                                            onClick={() =>
+                                                                setSelectedCell({
+                                                                    day: day.key,
+                                                                    role,
+                                                                })
+                                                            }
+                                                            onToggleLock={() =>
+                                                                onToggleCellLock(
+                                                                    day.key,
+                                                                    role,
+                                                                )
+                                                            }
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-
-                                        <div className="space-y-2">
-                                            {group.roles.map((role) => {
-                                                const cell = getCell(
-                                                    day.key,
-                                                    role,
-                                                );
-                                                const employeeId =
-                                                    cell?.employeeId ?? null;
-                                                const employeeName =
-                                                    getEmployeeName(employeeId);
-                                                const isEmpty = !employeeId;
-                                                const locked =
-                                                    cell?.locked ?? false;
-
-                                                const isDragOver =
-                                                    dragOverCell?.day ===
-                                                        day.key &&
-                                                    dragOverCell.role === role;
-                                                const dragged = getEmployee(
-                                                    draggedEmployee?.employeeId ??
-                                                        null,
-                                                );
-                                                const dragValidation =
-                                                    isDragOver && dragged
-                                                        ? getDragValidation(
-                                                              dragged,
-                                                              day.key,
-                                                              role,
-                                                          )
-                                                        : null;
-
-                                                return (
-                                                    <DroppableScheduleCell
-                                                        key={`${day.key}-${role}`}
-                                                        day={day.key}
-                                                        role={role}
-                                                        employeeId={employeeId}
-                                                        employeeName={
-                                                            employeeName
-                                                        }
-                                                        isEmpty={isEmpty}
-                                                        locked={locked}
-                                                        isDragOver={isDragOver}
-                                                        dragValidation={
-                                                            dragValidation
-                                                        }
-                                                        onClick={() =>
-                                                            setSelectedCell({
-                                                                day: day.key,
-                                                                role,
-                                                            })
-                                                        }
-                                                        onToggleLock={() =>
-                                                            onToggleCellLock(
-                                                                day.key,
-                                                                role,
-                                                            )
-                                                        }
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
+                        ))}
+                    </section>
+                )}
+
+                {viewMode === "employee" && (
+                    <section className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-4 shadow-xl shadow-black/20">
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse text-sm">
+                                <thead>
+                                    <tr>
+                                        <th className="sticky left-0 z-10 min-w-28 bg-neutral-900/80 px-3 py-2 text-left text-xs font-semibold text-neutral-400">
+                                            员工
+                                        </th>
+                                        {WEEKDAYS.map((day) => (
+                                            <th
+                                                key={day.key}
+                                                className="min-w-24 px-3 py-2 text-center text-xs font-semibold text-neutral-400"
+                                            >
+                                                {day.shortLabel}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {employees.length === 0 ? (
+                                        <tr>
+                                            <td
+                                                colSpan={8}
+                                                className="rounded-xl border border-dashed border-neutral-700 p-6 text-center text-sm text-neutral-500"
+                                            >
+                                                还没有员工
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        employees.map((employee) => {
+                                            const colorClass =
+                                                getEmployeeColorClass(
+                                                    employee.id,
+                                                );
+
+                                            return (
+                                                <tr
+                                                    key={employee.id}
+                                                    className="border-b border-neutral-800 last:border-b-0"
+                                                >
+                                                    <td className="sticky left-0 z-10 flex items-center gap-2 bg-neutral-900/80 px-3 py-3 font-medium text-neutral-100">
+                                                        <span
+                                                            className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorClass}`}
+                                                        />
+                                                        <span>
+                                                            {employee.name}
+                                                        </span>
+                                                    </td>
+                                                    {WEEKDAYS.map((day) => {
+                                                        const role =
+                                                            getEmployeeRoleOnDay(
+                                                                employee.id,
+                                                                day.key,
+                                                            );
+
+                                                        return (
+                                                            <td
+                                                                key={day.key}
+                                                                className="px-3 py-3 text-center"
+                                                            >
+                                                                {role ? (
+                                                                    <span className="inline-block rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-medium text-amber-300">
+                                                                        {role}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-xs text-neutral-600">
+                                                                        —
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
-                    ))}
-                </section>
+                    </section>
+                )}
             </DndContext>
 
             {selectedCell ? (
