@@ -30,11 +30,19 @@ import type {
     Employee,
     ScheduleCell,
     SchedulePlanMap,
+    SchedulePlansByWeek,
     SchedulerBackup,
     StoreEmployeeMap,
     StoreRuleMap,
 } from "@/lib/types";
 import { StoreRulesPanel } from "@/components/StoreRulesPanel";
+import {
+    buildWeekDates,
+    getDateDiffInDays,
+    getNextMondayDateInputValue,
+    getTodayDateInputValue,
+    normalizeToMondayDateInputValue,
+} from "@/lib/date-utils";
 
 function createEmptyPlanMap(): SchedulePlanMap {
     return Object.fromEntries(
@@ -48,6 +56,43 @@ function createEmptyPlanMap(): SchedulePlanMap {
             },
         ]),
     );
+}
+
+function createEmptySchedulePlansByWeek(): SchedulePlansByWeek {
+    return {};
+}
+
+function getSchedulePlanMapForWeek(
+    schedulePlansByWeek: SchedulePlansByWeek,
+    weekStartDate: string,
+): SchedulePlanMap {
+    return schedulePlansByWeek[weekStartDate] ?? createEmptyPlanMap();
+}
+
+function pruneSchedulePlansByWeek(
+    schedulePlansByWeek: SchedulePlansByWeek,
+    todayValue: string,
+): SchedulePlansByWeek {
+    const next: SchedulePlansByWeek = {};
+
+    for (const [weekStartDate, planMap] of Object.entries(
+        schedulePlansByWeek,
+    )) {
+        const diffDays = getDateDiffInDays(weekStartDate, todayValue);
+
+        /**
+         * 只保留最近一个月：
+         * - 过去 31 天内
+         * - 未来 31 天内
+         *
+         * 这样既能看最近历史，也能保留下几周计划。
+         */
+        if (diffDays >= -31 && diffDays <= 31) {
+            next[weekStartDate] = planMap;
+        }
+    }
+
+    return next;
 }
 
 function createEmptyStoreEmployeeMap(): StoreEmployeeMap {
@@ -70,8 +115,8 @@ function isValidBackup(value: unknown): value is SchedulerBackup {
         typeof backup.storeEmployeeIds === "object" &&
         !!backup.storeRules &&
         typeof backup.storeRules === "object" &&
-        !!backup.schedulePlans &&
-        typeof backup.schedulePlans === "object" &&
+        !!backup.schedulePlansByWeek &&
+        typeof backup.schedulePlansByWeek === "object" &&
         typeof backup.activeStoreId === "string" &&
         typeof backup.activePlanId === "string"
     );
@@ -85,9 +130,8 @@ export default function Home() {
     const [storeRules, setStoreRules] = useState<StoreRuleMap>(() =>
         createEmptyStoreRuleMap(),
     );
-    const [schedulePlans, setSchedulePlans] = useState<SchedulePlanMap>(() =>
-        createEmptyPlanMap(),
-    );
+    const [schedulePlansByWeek, setSchedulePlansByWeek] =
+        useState<SchedulePlansByWeek>(() => createEmptySchedulePlansByWeek());
     const [activeStoreId, setActiveStoreId] = useState(DEFAULT_STORE_ID);
     const [activePlanId, setActivePlanId] = useState(DEFAULT_PLAN_ID);
     const [hasLoadedStorage, setHasLoadedStorage] = useState(false);
@@ -112,6 +156,9 @@ export default function Home() {
         }));
     }
 
+    const [todayValue, setTodayValue] = useState("");
+    const [weekStartDate, setWeekStartDate] = useState("");
+
     const backupFileInputRef = useRef<HTMLInputElement | null>(null);
 
     const activeStore =
@@ -124,8 +171,16 @@ export default function Home() {
 
     const activeStoreRoles = getStoreRoles(activeStore);
 
+    const activeWeekStartDate = weekStartDate || getNextMondayDateInputValue();
+    const weekDates = buildWeekDates(activeWeekStartDate);
+
+    const activeWeekSchedulePlans = getSchedulePlanMapForWeek(
+        schedulePlansByWeek,
+        activeWeekStartDate,
+    );
+
     const activeScheduleCells: ScheduleCell[] =
-        schedulePlans[activePlanId]?.cells ?? [];
+        activeWeekSchedulePlans[activePlanId]?.cells ?? [];
 
     const activeStoreEmployeeIds = storeEmployeeIds[activeStoreId] ?? [];
 
@@ -149,6 +204,12 @@ export default function Home() {
     );
 
     useEffect(() => {
+        const today = getTodayDateInputValue();
+        const nextMonday = getNextMondayDateInputValue();
+
+        setTodayValue(today);
+        setWeekStartDate(nextMonday);
+
         const legacyEmployees = loadFromStorage<Employee[]>(
             STORAGE_KEYS.employees,
             [],
@@ -169,9 +230,14 @@ export default function Home() {
             createEmptyStoreRuleMap(),
         );
 
-        const savedSchedulePlans = loadFromStorage<SchedulePlanMap>(
+        const savedLegacySchedulePlans = loadFromStorage<SchedulePlanMap>(
             STORAGE_KEYS.schedulePlans,
             createEmptyPlanMap(),
+        );
+
+        const savedSchedulePlansByWeek = loadFromStorage<SchedulePlansByWeek>(
+            STORAGE_KEYS.schedulePlansByWeek,
+            createEmptySchedulePlansByWeek(),
         );
 
         const savedStoreId = loadFromStorage<string>(
@@ -189,6 +255,24 @@ export default function Home() {
         const planExists = PLAN_OPTIONS.some((plan) => plan.id === savedPlanId);
 
         const nextStoreId = storeExists ? savedStoreId : DEFAULT_STORE_ID;
+
+        const migratedSchedulePlansByWeek: SchedulePlansByWeek = {
+            ...savedSchedulePlansByWeek,
+        };
+        /**
+         * 兼容旧版：
+         * 如果旧版 schedulePlans 有内容，但新版还没有对应周数据，
+         * 就把旧方案迁移到默认下一周。
+         */
+        if (
+            Object.keys(savedLegacySchedulePlans).length > 0 &&
+            !migratedSchedulePlansByWeek[nextMonday]
+        ) {
+            migratedSchedulePlansByWeek[nextMonday] = {
+                ...createEmptyPlanMap(),
+                ...savedLegacySchedulePlans,
+            };
+        }
 
         let nextStoreEmployeeIds = {
             ...createEmptyStoreEmployeeMap(),
@@ -212,10 +296,9 @@ export default function Home() {
 
         setEmployeePool(savedEmployeePool.map(normalizeEmployee));
         setStoreEmployeeIds(nextStoreEmployeeIds);
-        setSchedulePlans({
-            ...createEmptyPlanMap(),
-            ...savedSchedulePlans,
-        });
+        setSchedulePlansByWeek(
+            pruneSchedulePlansByWeek(migratedSchedulePlansByWeek, today),
+        );
         setActiveStoreId(nextStoreId);
         setActivePlanId(planExists ? savedPlanId : DEFAULT_PLAN_ID);
         setStoreRules({
@@ -240,8 +323,18 @@ export default function Home() {
     useEffect(() => {
         if (!hasLoadedStorage) return;
 
-        saveToStorage(STORAGE_KEYS.schedulePlans, schedulePlans);
-    }, [schedulePlans, hasLoadedStorage]);
+        const today = todayValue || getTodayDateInputValue();
+        const pruned = pruneSchedulePlansByWeek(schedulePlansByWeek, today);
+
+        saveToStorage(STORAGE_KEYS.schedulePlansByWeek, pruned);
+
+        if (
+            Object.keys(pruned).length !==
+            Object.keys(schedulePlansByWeek).length
+        ) {
+            setSchedulePlansByWeek(pruned);
+        }
+    }, [schedulePlansByWeek, todayValue, hasLoadedStorage]);
 
     useEffect(() => {
         if (!hasLoadedStorage) return;
@@ -276,8 +369,11 @@ export default function Home() {
     }
 
     function updateActivePlanCells(cells: ScheduleCell[]) {
-        setSchedulePlans((current) => {
-            const currentPlan = current[activePlanId] ?? {
+        setSchedulePlansByWeek((current) => {
+            const currentWeekPlans =
+                current[activeWeekStartDate] ?? createEmptyPlanMap();
+
+            const currentPlan = currentWeekPlans[activePlanId] ?? {
                 id: activePlan.id,
                 name: activePlan.name,
                 storeId: activeStoreId,
@@ -286,11 +382,14 @@ export default function Home() {
 
             return {
                 ...current,
-                [activePlanId]: {
-                    ...currentPlan,
-                    name: activePlan.name,
-                    storeId: activeStoreId,
-                    cells,
+                [activeWeekStartDate]: {
+                    ...currentWeekPlans,
+                    [activePlanId]: {
+                        ...currentPlan,
+                        name: activePlan.name,
+                        storeId: activeStoreId,
+                        cells,
+                    },
                 },
             };
         });
@@ -299,25 +398,33 @@ export default function Home() {
     function handleStoreChange(nextStoreId: string) {
         setActiveStoreId(nextStoreId);
 
-        setSchedulePlans((current) => ({
-            ...current,
-            [activePlanId]: {
-                ...(current[activePlanId] ?? {
-                    id: activePlan.id,
-                    name: activePlan.name,
-                    storeId: nextStoreId,
-                    cells: [],
-                }),
-                storeId: nextStoreId,
-                cells: [],
-            },
-        }));
+        setSchedulePlansByWeek((current) => {
+            const currentWeekPlans =
+                current[activeWeekStartDate] ?? createEmptyPlanMap();
+
+            return {
+                ...current,
+                [activeWeekStartDate]: {
+                    ...currentWeekPlans,
+                    [activePlanId]: {
+                        ...(currentWeekPlans[activePlanId] ?? {
+                            id: activePlan.id,
+                            name: activePlan.name,
+                            storeId: nextStoreId,
+                            cells: [],
+                        }),
+                        storeId: nextStoreId,
+                        cells: [],
+                    },
+                },
+            };
+        });
     }
 
     function handlePlanChange(nextPlanId: string) {
         setActivePlanId(nextPlanId);
 
-        const nextPlan = schedulePlans[nextPlanId];
+        const nextPlan = activeWeekSchedulePlans[nextPlanId];
 
         if (
             nextPlan?.storeId &&
@@ -345,8 +452,11 @@ export default function Home() {
         role: string,
         employeeId: string | null,
     ) {
-        setSchedulePlans((current) => {
-            const currentPlan = current[activePlanId] ?? {
+        setSchedulePlansByWeek((current) => {
+            const currentWeekPlans =
+                current[activeWeekStartDate] ?? createEmptyPlanMap();
+
+            const currentPlan = currentWeekPlans[activePlanId] ?? {
                 id: activePlan.id,
                 name: activePlan.name,
                 storeId: activeStoreId,
@@ -363,27 +473,33 @@ export default function Home() {
 
             return {
                 ...current,
-                [activePlanId]: {
-                    ...currentPlan,
-                    name: activePlan.name,
-                    storeId: activeStoreId,
-                    cells: [
-                        ...otherCells,
-                        {
-                            day,
-                            role,
-                            employeeId,
-                            locked: existingCell?.locked ?? false,
-                        },
-                    ],
+                [activeWeekStartDate]: {
+                    ...currentWeekPlans,
+                    [activePlanId]: {
+                        ...currentPlan,
+                        name: activePlan.name,
+                        storeId: activeStoreId,
+                        cells: [
+                            ...otherCells,
+                            {
+                                day,
+                                role,
+                                employeeId,
+                                locked: existingCell?.locked ?? false,
+                            },
+                        ],
+                    },
                 },
             };
         });
     }
 
     function handleToggleCellLock(day: ScheduleCell["day"], role: string) {
-        setSchedulePlans((current) => {
-            const currentPlan = current[activePlanId] ?? {
+        setSchedulePlansByWeek((current) => {
+            const currentWeekPlans =
+                current[activeWeekStartDate] ?? createEmptyPlanMap();
+
+            const currentPlan = currentWeekPlans[activePlanId] ?? {
                 id: activePlan.id,
                 name: activePlan.name,
                 storeId: activeStoreId,
@@ -407,11 +523,14 @@ export default function Home() {
 
             return {
                 ...current,
-                [activePlanId]: {
-                    ...currentPlan,
-                    name: activePlan.name,
-                    storeId: activeStoreId,
-                    cells: [...otherCells, nextCell],
+                [activeWeekStartDate]: {
+                    ...currentWeekPlans,
+                    [activePlanId]: {
+                        ...currentPlan,
+                        name: activePlan.name,
+                        storeId: activeStoreId,
+                        cells: [...otherCells, nextCell],
+                    },
                 },
             };
         });
@@ -428,8 +547,11 @@ export default function Home() {
         toDay: ScheduleCell["day"];
         toRole: string;
     }) {
-        setSchedulePlans((current) => {
-            const currentPlan = current[activePlanId] ?? {
+        setSchedulePlansByWeek((current) => {
+            const currentWeekPlans =
+                current[activeWeekStartDate] ?? createEmptyPlanMap();
+
+            const currentPlan = currentWeekPlans[activePlanId] ?? {
                 id: activePlan.id,
                 name: activePlan.name,
                 storeId: activeStoreId,
@@ -459,25 +581,28 @@ export default function Home() {
 
             return {
                 ...current,
-                [activePlanId]: {
-                    ...currentPlan,
-                    name: activePlan.name,
-                    storeId: activeStoreId,
-                    cells: [
-                        ...otherCells,
-                        {
-                            day: fromDay,
-                            role: fromRole,
-                            employeeId: toEmployeeId,
-                            locked: fromCell.locked ?? false,
-                        },
-                        {
-                            day: toDay,
-                            role: toRole,
-                            employeeId: fromEmployeeId,
-                            locked: toCell?.locked ?? false,
-                        },
-                    ],
+                [activeWeekStartDate]: {
+                    ...currentWeekPlans,
+                    [activePlanId]: {
+                        ...currentPlan,
+                        name: activePlan.name,
+                        storeId: activeStoreId,
+                        cells: [
+                            ...otherCells,
+                            {
+                                day: fromDay,
+                                role: fromRole,
+                                employeeId: toEmployeeId,
+                                locked: fromCell.locked ?? false,
+                            },
+                            {
+                                day: toDay,
+                                role: toRole,
+                                employeeId: fromEmployeeId,
+                                locked: toCell?.locked ?? false,
+                            },
+                        ],
+                    },
                 },
             };
         });
@@ -490,24 +615,30 @@ export default function Home() {
     function handleCopyCurrentPlanTo(targetPlanId: string) {
         if (targetPlanId === activePlanId) return;
 
-        const sourcePlan = schedulePlans[activePlanId];
+        const sourcePlan = activeWeekSchedulePlans[activePlanId];
         const targetPlan = PLAN_OPTIONS.find(
             (plan) => plan.id === targetPlanId,
         );
 
         if (!sourcePlan || !targetPlan) return;
 
-        setSchedulePlans((current) => ({
-            ...current,
-            [targetPlanId]: {
-                id: targetPlan.id,
-                name: targetPlan.name,
-                storeId: activeStoreId,
-                cells: sourcePlan.cells.map((cell) => ({
-                    ...cell,
-                })),
-            },
-        }));
+        setSchedulePlansByWeek((current) => {
+            const currentWeekPlans =
+                current[activeWeekStartDate] ?? createEmptyPlanMap();
+
+            return {
+                ...current,
+                [activeWeekStartDate]: {
+                    ...currentWeekPlans,
+                    [targetPlanId]: {
+                        id: targetPlan.id,
+                        name: targetPlan.name,
+                        storeId: activeStoreId,
+                        cells: sourcePlan.cells.map((cell) => ({ ...cell })),
+                    },
+                },
+            };
+        });
 
         setCopyPlanMessage(`已复制到 ${targetPlan.name}`);
 
@@ -519,7 +650,7 @@ export default function Home() {
     function handleClearAllData() {
         setEmployeePool([]);
         setStoreEmployeeIds(createEmptyStoreEmployeeMap());
-        setSchedulePlans(createEmptyPlanMap());
+        setSchedulePlansByWeek(createEmptySchedulePlansByWeek());
         setActiveStoreId(DEFAULT_STORE_ID);
         setActivePlanId(DEFAULT_PLAN_ID);
         setStoreRules(createEmptyStoreRuleMap());
@@ -528,6 +659,7 @@ export default function Home() {
         removeFromStorage(STORAGE_KEYS.storeEmployeeIds);
         removeFromStorage(STORAGE_KEYS.employees);
         removeFromStorage(STORAGE_KEYS.schedulePlans);
+        removeFromStorage(STORAGE_KEYS.schedulePlansByWeek);
         removeFromStorage(STORAGE_KEYS.activeStoreId);
         removeFromStorage(STORAGE_KEYS.activePlanId);
         removeFromStorage(STORAGE_KEYS.currentSchedule);
@@ -541,6 +673,7 @@ export default function Home() {
             roles: activeStoreRoles,
             employees: activeEmployees,
             cells: activeScheduleCells,
+            weekDates,
             format,
         });
 
@@ -570,13 +703,15 @@ export default function Home() {
         const payload = {
             store: activeStore,
             plan: activePlan,
+            weekStartDate: activeWeekStartDate,
+            weekDates,
             employees: activeEmployees,
             cells: activeScheduleCells,
             exportedAt: new Date().toISOString(),
         };
 
         downloadJsonFile(
-            `${activeStore.id}-${activePlan.id}-schedule.json`,
+            `${activeStore.id}-${activePlan.id}-${activeWeekStartDate}-schedule.json`,
             payload,
         );
     }
@@ -588,7 +723,7 @@ export default function Home() {
             employeePool,
             storeEmployeeIds,
             storeRules,
-            schedulePlans,
+            schedulePlansByWeek,
             activeStoreId,
             activePlanId,
         };
@@ -641,10 +776,10 @@ export default function Home() {
             ...createEmptyStoreEmployeeMap(),
             ...backup.storeEmployeeIds,
         };
-        const nextSchedulePlans = {
-            ...createEmptyPlanMap(),
-            ...backup.schedulePlans,
-        };
+        const nextSchedulePlansByWeek = pruneSchedulePlansByWeek(
+            backup.schedulePlansByWeek,
+            getTodayDateInputValue(),
+        );
         const nextStoreRules = {
             ...createEmptyStoreRuleMap(),
             ...backup.storeRules,
@@ -652,14 +787,17 @@ export default function Home() {
 
         setEmployeePool(nextEmployeePool);
         setStoreEmployeeIds(nextStoreEmployeeIds);
-        setSchedulePlans(nextSchedulePlans);
+        setSchedulePlansByWeek(nextSchedulePlansByWeek);
         setActiveStoreId(nextStoreId);
         setActivePlanId(nextPlanId);
         setStoreRules(nextStoreRules);
 
         saveToStorage(STORAGE_KEYS.employeePool, nextEmployeePool);
         saveToStorage(STORAGE_KEYS.storeEmployeeIds, nextStoreEmployeeIds);
-        saveToStorage(STORAGE_KEYS.schedulePlans, nextSchedulePlans);
+        saveToStorage(
+            STORAGE_KEYS.schedulePlansByWeek,
+            nextSchedulePlansByWeek,
+        );
         saveToStorage(STORAGE_KEYS.activeStoreId, nextStoreId);
         saveToStorage(STORAGE_KEYS.activePlanId, nextPlanId);
         saveToStorage(STORAGE_KEYS.storeRules, nextStoreRules);
@@ -823,6 +961,47 @@ export default function Home() {
                     当前方案：
                     <span className="text-neutral-100">{activePlan.name}</span>
                     <span className="mx-2 text-neutral-700">/</span>
+                    <span className="mx-2 text-neutral-700">/</span>
+                    今天：
+                    <span className="text-neutral-100">{todayValue}</span>
+                    <span className="mx-2 text-neutral-700">/</span>
+                    排班周：
+                    <span className="text-neutral-100">
+                        {weekDates[0]?.dateLabel} - {weekDates[6]?.dateLabel}
+                    </span>
+                    <span className="mx-2 text-neutral-700">/</span>
+                    本周方案数：
+                    <span className="text-neutral-100">
+                        {
+                            Object.values(activeWeekSchedulePlans).filter(
+                                (plan) => plan.cells.length > 0,
+                            ).length
+                        }
+                    </span>
+                    <label className="flex items-center gap-2 rounded-xl border border-neutral-700 bg-white px-3 py-2 text-sm text-neutral-500">
+                        <span>周一</span>
+                        <input
+                            type="date"
+                            value={weekStartDate}
+                            onChange={(event) => {
+                                setWeekStartDate(
+                                    normalizeToMondayDateInputValue(
+                                        event.target.value,
+                                    ),
+                                );
+                            }}
+                            className="border-none bg-transparent text-sm text-neutral-900 outline-none"
+                        />
+                    </label>
+                    <button
+                        onClick={() => {
+                            setTodayValue(getTodayDateInputValue());
+                            setWeekStartDate(getNextMondayDateInputValue());
+                        }}
+                        className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
+                    >
+                        回到下周
+                    </button>
                     门店员工：
                     <span className="text-neutral-100">
                         {activeEmployees.length}
@@ -862,6 +1041,7 @@ export default function Home() {
                 <ScheduleBoard
                     roleGroups={activeStore.roleGroups}
                     roles={activeStoreRoles}
+                    weekDates={weekDates}
                     employees={activeEmployees}
                     cells={activeScheduleCells}
                     onAssignEmployee={handleAssignEmployee}

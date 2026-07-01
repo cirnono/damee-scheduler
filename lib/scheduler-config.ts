@@ -66,6 +66,32 @@ export const WEEKDAYS: {
 
 export const STORE_CONFIGS: StoreConfig[] = [
     {
+        id: "eastwood",
+        name: "Eastwood",
+        roleGroups: [
+            {
+                id: "front",
+                name: "前厅",
+                roles: ["卤切", "卤收银", "豆", "送货"],
+            },
+            {
+                id: "kitchen",
+                name: "后厨",
+                roles: ["厨房", "帮厨", "炸", "豆腐"],
+            },
+        ],
+        roleHours: {
+            卤切: 8,
+            卤收银: 8,
+            豆: 8,
+            送货: 8,
+            厨房: 8,
+            帮厨: 8,
+            炸: 8,
+            豆腐: 8,
+        },
+    },
+    {
         id: "campsie",
         name: "Campsie",
         roleGroups: [
@@ -123,23 +149,6 @@ export const STORE_CONFIGS: StoreConfig[] = [
             备货: 6,
         },
     },
-    {
-        id: "eastwood",
-        name: "Eastwood",
-        roleGroups: [
-            {
-                id: "front",
-                name: "前厅",
-                roles: ["卤切", "卤收银", "豆", "肠粉"],
-            },
-        ],
-        roleHours: {
-            卤切: 8,
-            卤收银: 8,
-            豆: 8,
-            肠粉: 8,
-        },
-    },
 ];
 
 export function getStoreRoles(store: StoreConfig) {
@@ -176,6 +185,7 @@ export const STORAGE_KEYS = {
     activePlanId: "damee-scheduler-active-plan-id",
     currentSchedule: "damee-scheduler-current-schedule",
     schedulePlans: "damee-scheduler-schedule-plans",
+    schedulePlansByWeek: "damee-scheduler-schedule-plans-by-week",
 };
 
 function assertUniqueIds(items: { id: string }[], label: string) {
