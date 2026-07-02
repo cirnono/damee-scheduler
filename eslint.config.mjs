@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const compat = new FlatCompat({
-  baseDirectory: __dirname
+  baseDirectory: __dirname,
 });
 
 export default tseslint.config(
@@ -23,8 +23,8 @@ export default tseslint.config(
       "dist/**",
       "out/**",
       ".turbo/**",
-      "next-env.d.ts"
-    ]
+      "next-env.d.ts",
+    ],
   },
 
   js.configs.recommended,
@@ -39,14 +39,14 @@ export default tseslint.config(
     files: ["**/*.{ts,tsx}"],
 
     plugins: {
-      "unused-imports": unusedImports
+      "unused-imports": unusedImports,
     },
 
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: __dirname
-      }
+        tsconfigRootDir: __dirname,
+      },
     },
 
     rules: {
@@ -63,8 +63,8 @@ export default tseslint.config(
           max: 80,
           skipBlankLines: true,
           skipComments: true,
-          IIFEs: true
-        }
+          IIFEs: true,
+        },
       ],
       "max-statements": ["warn", 35],
 
@@ -75,8 +75,8 @@ export default tseslint.config(
       "sonarjs/no-duplicate-string": [
         "warn",
         {
-          threshold: 5
-        }
+          threshold: 5,
+        },
       ],
 
       /**
@@ -99,8 +99,8 @@ export default tseslint.config(
           vars: "all",
           varsIgnorePattern: "^_",
           args: "after-used",
-          argsIgnorePattern: "^_"
-        }
+          argsIgnorePattern: "^_",
+        },
       ],
 
       /**
@@ -109,8 +109,8 @@ export default tseslint.config(
       "no-console": [
         "warn",
         {
-          allow: ["warn", "error"]
-        }
+          allow: ["warn", "error"],
+        },
       ],
       "no-alert": "error",
       "no-debugger": "error",
@@ -120,13 +120,13 @@ export default tseslint.config(
       "no-script-url": "error",
       "no-return-await": "error",
       "prefer-const": "error",
-      "eqeqeq": ["error", "always"],
+      eqeqeq: ["error", "always"],
 
       /**
        * React / Next 常见容忍项
        */
-      "react/display-name": "off"
-    }
+      "react/display-name": "off",
+    },
   },
 
   /**
@@ -139,13 +139,13 @@ export default tseslint.config(
       "app/**/route.ts",
       "app/**/loading.tsx",
       "app/**/error.tsx",
-      "app/**/not-found.tsx"
+      "app/**/not-found.tsx",
     ],
     rules: {
       "max-lines-per-function": "off",
       "max-statements": "off",
-      "sonarjs/cognitive-complexity": ["warn", 25]
-    }
+      "sonarjs/cognitive-complexity": ["warn", 25],
+    },
   },
 
   /**
@@ -157,13 +157,13 @@ export default tseslint.config(
       "**/*.test.tsx",
       "**/*.spec.ts",
       "**/*.spec.tsx",
-      "tests/**/*.{ts,tsx}"
+      "tests/**/*.{ts,tsx}",
     ],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "max-lines-per-function": "off",
-      "sonarjs/no-duplicate-string": "off"
-    }
+      "sonarjs/no-duplicate-string": "off",
+    },
   },
 
   /**
@@ -176,11 +176,11 @@ export default tseslint.config(
       "*.config.ts",
       "next.config.ts",
       "postcss.config.mjs",
-      "tailwind.config.ts"
+      "tailwind.config.ts",
     ],
     rules: {
       "@typescript-eslint/no-var-requires": "off",
-      "sonarjs/no-duplicate-string": "off"
-    }
-  }
+      "sonarjs/no-duplicate-string": "off",
+    },
+  },
 );
