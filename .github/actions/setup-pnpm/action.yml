@@ -1,12 +1,6 @@
 name: Setup pnpm project
 description: Setup pnpm, Node.js, dependency cache, and install dependencies
 
-inputs:
-  node-version:
-    description: Node.js version
-    required: false
-    default: "22"
-
 runs:
   using: composite
   steps:
@@ -18,7 +12,7 @@ runs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ inputs.node-version }}
+        node-version-file: ".nvmrc"
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml
 
