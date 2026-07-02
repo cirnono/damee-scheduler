@@ -20,17 +20,20 @@ export default tseslint.config(
       ".turbo/**",
       "next-env.d.ts",
       "eslint.config.mjs",
+      "postcss.config.mjs",
     ],
   },
 
   js.configs.recommended,
 
-  ...tseslint.configs.recommendedTypeChecked,
+  ...tseslint.configs.recommended,
+  ...tseslint.configs.stylistic,
 
   sonarjs.configs.recommended,
 
   {
     files: ["**/*.{ts,tsx}"],
+    ...tseslint.configs.recommendedTypeChecked,
 
     plugins: {
       "unused-imports": unusedImports,
