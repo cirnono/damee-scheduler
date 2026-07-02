@@ -10,48 +10,56 @@ on:
       - dev
       - main
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  nextjs-ci:
-    name: Next.js CI
+  quality:
+    name: Quality Gates
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
+    timeout-minutes: 20
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup project
+        uses: ./.github/actions/setup-pnpm
         with:
-          node-version-file: ".nvmrc"
-          cache: pnpm
+          node-version: "22"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Check formatting
+        run: pnpm format:check
 
       - name: Lint
-        run: pnpm run --if-present lint
+        run: pnpm lint:strict
 
       - name: Type check
-        run: pnpm run --if-present typecheck
-
-      - name: Test
-        run: pnpm run --if-present test
-
-      - name: Build
-        run: pnpm run build
-
-      - name: Audit dependencies
-        run: pnpm run --if-present audit
+        run: pnpm typecheck
 
       - name: Check circular dependencies
-        run: pnpm run --if-present check:cycles
+        run: pnpm arch:cycles
+
+      - name: Test with coverage
+        run: pnpm test:coverage
+
+      - name: Audit all dependencies
+        run: pnpm audit:all
+
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage
+          if-no-files-found: ignore
+          retention-days: 7
