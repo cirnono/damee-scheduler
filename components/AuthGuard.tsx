@@ -5,20 +5,22 @@ import { useEffect, useState } from "react";
 
 type AuthGuardState = "loading" | "authenticated" | "unauthenticated";
 
+function getInitialState(): AuthGuardState {
+    if (typeof window === "undefined") return "loading";
+    return localStorage.getItem("damee-scheduler-auth") === "skipped"
+        ? "authenticated"
+        : "unauthenticated";
+}
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter();
-    const [state, setState] = useState<AuthGuardState>("loading");
+    const [state] = useState<AuthGuardState>(getInitialState);
 
     useEffect(() => {
-        const auth = localStorage.getItem("damee-scheduler-auth");
-
-        if (auth === "skipped") {
-            setState("authenticated");
-        } else {
-            setState("unauthenticated");
+        if (state === "unauthenticated") {
             router.replace("/login");
         }
-    }, [router]);
+    }, [state, router]);
 
     if (state === "loading") {
         return (

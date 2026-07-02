@@ -431,7 +431,6 @@ function DroppableScheduleCell({
 
 export function ScheduleBoard({
     roleGroups,
-    roles,
     employees,
     cells,
     weekDates,

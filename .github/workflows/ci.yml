@@ -49,3 +49,9 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      - name: Audit dependencies
+        run: pnpm run --if-present audit
+
+      - name: Check circular dependencies
+        run: pnpm run --if-present check:cycles

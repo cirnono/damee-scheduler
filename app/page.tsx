@@ -36,6 +36,7 @@ import type {
     StoreRuleMap,
 } from "@/lib/types";
 import { AuthGuard } from "@/components/AuthGuard";
+import { Header } from "@/components/Header";
 import { StoreRulesPanel } from "@/components/StoreRulesPanel";
 import {
     buildWeekDates,
@@ -157,8 +158,10 @@ export default function Home() {
         }));
     }
 
-    const [todayValue, setTodayValue] = useState("");
-    const [weekStartDate, setWeekStartDate] = useState("");
+    const [todayValue, setTodayValue] = useState(getTodayDateInputValue);
+    const [weekStartDate, setWeekStartDate] = useState(
+        getNextMondayDateInputValue,
+    );
 
     const backupFileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -205,11 +208,8 @@ export default function Home() {
     );
 
     useEffect(() => {
-        const today = getTodayDateInputValue();
         const nextMonday = getNextMondayDateInputValue();
-
-        setTodayValue(today);
-        setWeekStartDate(nextMonday);
+        const today = getTodayDateInputValue();
 
         const legacyEmployees = loadFromStorage<Employee[]>(
             STORAGE_KEYS.employees,
@@ -295,6 +295,8 @@ export default function Home() {
             };
         }
 
+        // Data synchronization from localStorage — runs once on mount.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setEmployeePool(savedEmployeePool.map(normalizeEmployee));
         setStoreEmployeeIds(nextStoreEmployeeIds);
         setSchedulePlansByWeek(
@@ -333,6 +335,9 @@ export default function Home() {
             Object.keys(pruned).length !==
             Object.keys(schedulePlansByWeek).length
         ) {
+            // Sync pruned schedule back to state — this is a data sync from
+            // external storage, not cascading user-driven state changes.
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSchedulePlansByWeek(pruned);
         }
     }, [schedulePlansByWeek, todayValue, hasLoadedStorage]);
@@ -852,6 +857,7 @@ export default function Home() {
 
     return (
         <AuthGuard>
+            <Header />
         <main className="min-h-screen bg-neutral-950 text-neutral-50">
             <section className="mx-auto max-w-7xl px-6 py-8">
                 <header className="mb-8 flex flex-col gap-4 border-b border-neutral-800 pb-6 md:flex-row md:items-end md:justify-between">
