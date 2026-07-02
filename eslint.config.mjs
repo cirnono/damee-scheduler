@@ -1,7 +1,6 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { FlatCompat } from "@eslint/eslintrc";
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import sonarjs from "eslint-plugin-sonarjs";
@@ -9,10 +8,6 @@ import unusedImports from "eslint-plugin-unused-imports";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
 
 export default tseslint.config(
   {
@@ -24,12 +19,11 @@ export default tseslint.config(
       "out/**",
       ".turbo/**",
       "next-env.d.ts",
+      "eslint.config.mjs",
     ],
   },
 
   js.configs.recommended,
-
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
 
   ...tseslint.configs.recommendedTypeChecked,
 
