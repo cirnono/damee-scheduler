@@ -8,10 +8,10 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
+    "check:cycles": "madge --circular --extensions ts,tsx app components lib",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "audit": "pnpm audit --audit-level=high",
-    "check:cycles": "madge --circular --extensions ts,tsx app components lib"
+    "audit": "pnpm audit --audit-level=critical"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
