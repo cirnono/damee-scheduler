@@ -28,6 +28,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.2.10",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -37,8 +38,10 @@
     "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-sonarjs": "^4.1.0",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.7.0",
     "jsdom": "^29.1.1",
     "madge": "^8.0.0",
     "prettier": "^3.9.4",

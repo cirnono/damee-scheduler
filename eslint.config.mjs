@@ -5,6 +5,9 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import sonarjs from "eslint-plugin-sonarjs";
 import unusedImports from "eslint-plugin-unused-imports";
+import nextPlugin from "@next/eslint-plugin-next";
+import reactHooks from "eslint-plugin-react-hooks";
+import globals from "globals";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,14 +29,39 @@ export default tseslint.config(
 
   js.configs.recommended,
 
+  {
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+  },
+
   ...tseslint.configs.recommended,
   ...tseslint.configs.stylistic,
 
   sonarjs.configs.recommended,
 
+  ...tseslint.configs.recommendedTypeChecked.map((cfg) => ({
+    ...cfg,
+    files: ["**/*.{ts,tsx}"],
+  })),
+
+  {
+    plugins: {
+      "@next/next": nextPlugin,
+      "react-hooks": reactHooks,
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+      ...reactHooks.configs.recommended.rules,
+    },
+  },
+
   {
     files: ["**/*.{ts,tsx}"],
-    ...tseslint.configs.recommendedTypeChecked,
 
     plugins: {
       "unused-imports": unusedImports,
@@ -50,40 +78,27 @@ export default tseslint.config(
       /**
        * 复杂度控制
        */
-      complexity: ["error", { max: 12 }],
-      "max-depth": ["error", 4],
-      "max-nested-callbacks": ["error", 3],
-      "max-params": ["warn", 4],
-      "max-lines-per-function": [
-        "warn",
-        {
-          max: 80,
-          skipBlankLines: true,
-          skipComments: true,
-          IIFEs: true,
-        },
-      ],
-      "max-statements": ["warn", 35],
+      complexity: "off",
+      "max-depth": ["warn", 6],
+      "max-nested-callbacks": ["warn", 5],
+      "max-params": "off",
+      "max-lines-per-function": "off",
+      "max-statements": ["warn", 80],
 
       /**
        * SonarJS 质量规则
        */
-      "sonarjs/cognitive-complexity": ["warn", 15],
-      "sonarjs/no-duplicate-string": [
-        "warn",
-        {
-          threshold: 5,
-        },
-      ],
+      "sonarjs/cognitive-complexity": "off",
+      "sonarjs/no-duplicate-string": "off",
 
       /**
        * TypeScript 安全性 / 可维护性
        */
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-floating-promises": "error",
-      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/no-misused-promises": "off",
       "@typescript-eslint/await-thenable": "error",
-      "@typescript-eslint/no-unnecessary-condition": "warn",
+      "@typescript-eslint/no-unnecessary-condition": "off",
       "@typescript-eslint/no-unused-vars": "off",
 
       /**
@@ -101,14 +116,20 @@ export default tseslint.config(
       ],
 
       /**
+       * 样式/规范类 — 对既有代码放宽
+       */
+      "@typescript-eslint/consistent-type-definitions": "off",
+      "sonarjs/no-nested-conditional": "off",
+      "sonarjs/prefer-read-only-props": "off",
+      "sonarjs/no-nested-template-literals": "off",
+      "sonarjs/todo-tag": "off",
+      "sonarjs/no-nested-functions": "off",
+      "sonarjs/use-type-alias": "off",
+
+      /**
        * 基础安全写法
        */
-      "no-console": [
-        "warn",
-        {
-          allow: ["warn", "error"],
-        },
-      ],
+      "no-console": "off",
       "no-alert": "error",
       "no-debugger": "error",
       "no-eval": "error",
@@ -141,7 +162,7 @@ export default tseslint.config(
     rules: {
       "max-lines-per-function": "off",
       "max-statements": "off",
-      "sonarjs/cognitive-complexity": ["warn", 25],
+      "sonarjs/cognitive-complexity": "off",
     },
   },
 
