@@ -3,26 +3,22 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type AuthGuardState = "loading" | "authenticated" | "unauthenticated";
-
-function getInitialState(): AuthGuardState {
-    if (typeof window === "undefined") return "loading";
-    return localStorage.getItem("damee-scheduler-auth") === "skipped"
-        ? "authenticated"
-        : "unauthenticated";
-}
-
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter();
-    const [state] = useState<AuthGuardState>(getInitialState);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        if (state === "unauthenticated") {
+        // One-time mount gate — must run after hydration to access localStorage.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setMounted(true);
+
+        const auth = localStorage.getItem("damee-scheduler-auth");
+        if (auth !== "skipped") {
             router.replace("/login");
         }
-    }, [state, router]);
+    }, [router]);
 
-    if (state === "loading") {
+    if (!mounted) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-neutral-50">
                 <div className="text-center">
@@ -31,10 +27,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                 </div>
             </div>
         );
-    }
-
-    if (state === "unauthenticated") {
-        return null;
     }
 
     return <>{children}</>;
