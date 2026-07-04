@@ -298,7 +298,7 @@ export default function Home() {
   useEffect(() => {
     listEmployees()
       .then((apiEmployees) => {
-        if (apiEmployees.length === 0) return; // keep localStorage data if API is empty
+        if (apiEmployees.length === 0) return;
 
         const mapped: Employee[] = apiEmployees.map((e) => ({
           id: e.id,
@@ -314,8 +314,8 @@ export default function Home() {
         }));
 
         setEmployeePool(mapped);
+        setSyncedEmployeeIds(new Set(apiEmployees.map((e) => e.id)));
 
-        // Rebuild storeEmployeeIds from API storeLinks
         const ids: StoreEmployeeMap = {};
         for (const e of apiEmployees) {
           for (const sid of e.storeIds) {
@@ -337,14 +337,22 @@ export default function Home() {
     boolean | null
   >(null);
 
-  useEffect(() => {
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL ??
-      "http://localhost:3001/api/v1/scheduler";
+  const browserSchedulerApi =
+    process.env.NEXT_PUBLIC_SCHEDULER_API ?? "/api/v1/scheduler";
+  const serverSchedulerApi =
+    process.env.SERVER_SCHEDULER_API ??
+    "http://localhost:3001/api/v1/scheduler";
+  const SCHEDULER_API =
+    typeof window === "undefined" ? serverSchedulerApi : browserSchedulerApi;
 
-    fetch(`${apiUrl}/employees`, { method: "HEAD" })
+  function checkBackend() {
+    fetch(`${SCHEDULER_API}/employees`, { method: "HEAD" })
       .then(() => setBackendConnected(true))
       .catch(() => setBackendConnected(false));
+  }
+
+  useEffect(() => {
+    checkBackend();
   }, []);
 
   // ─── Cloud sync state ──────────────────────────────────
@@ -945,6 +953,7 @@ export default function Home() {
         onOpenBackup={() => setShowBackupPanel(true)}
         onCopyPlan={handleCopyCurrentPlanTo}
         onReset={handleResetSchedule}
+        onRefreshBackend={checkBackend}
         backendConnected={backendConnected}
         cloudSyncMessage={cloudSyncMessage}
         stores={STORE_CONFIGS}

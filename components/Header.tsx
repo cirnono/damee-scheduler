@@ -22,6 +22,7 @@ type HeaderProps = {
   onReset: () => void;
   backendConnected: boolean | null;
   cloudSyncMessage: string;
+  onRefreshBackend: () => void;
   stores: { id: string; name: string }[];
   plans: { id: string; name: string }[];
 };
@@ -40,6 +41,7 @@ export function Header({
   onReset,
   backendConnected,
   cloudSyncMessage,
+  onRefreshBackend,
   stores,
   plans,
 }: HeaderProps) {
@@ -99,6 +101,14 @@ export function Header({
               }
             />
             {cloudSyncMessage || (backendConnected === null ? "检测中" : backendConnected ? "" : "离线")}
+            <button
+              type="button"
+              onClick={onRefreshBackend}
+              className="ml-0.5 rounded px-1 py-0.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+              title="重新检测后端连接"
+            >
+              ↻
+            </button>
           </span>
         </div>
 

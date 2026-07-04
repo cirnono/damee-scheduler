@@ -1,4 +1,10 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1/scheduler";
+const browserBase =
+  process.env.NEXT_PUBLIC_SCHEDULER_API ?? "/api/v1/scheduler";
+const serverBase =
+  process.env.SERVER_SCHEDULER_API ??
+  "http://localhost:3001/api/v1/scheduler";
+const API_BASE =
+  typeof window === "undefined" ? serverBase : browserBase;
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
