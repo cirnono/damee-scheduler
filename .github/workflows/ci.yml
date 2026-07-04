@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
     security-and-build:
-        name: Security and Build
+        name: Next.js CI
         runs-on: ubuntu-latest
         timeout-minutes: 20
 
