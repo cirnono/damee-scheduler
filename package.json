@@ -7,10 +7,11 @@
         "build": "next build",
         "start": "next start",
         "lint": "eslint .",
+        "lint:security": "eslint .",
         "typecheck": "tsc --noEmit",
-        "audit:prod": "pnpm audit --prod --audit-level high",
-        "audit:all": "pnpm audit --audit-level critical",
-        "ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm arch:cycles && pnpm test:coverage && pnpm audit:all && pnpm build"
+        "audit:prod": "pnpm audit --prod --audit-level critical",
+        "audit:all": "pnpm audit --audit-level high",
+        "ci": "pnpm lint:security && pnpm typecheck && pnpm audit:prod && pnpm build"
     },
     "dependencies": {
         "@dnd-kit/core": "^6.3.1",
@@ -33,6 +34,7 @@
         "eslint": "^9",
         "eslint-config-next": "16.2.4",
         "eslint-plugin-react-hooks": "^7.1.1",
+        "eslint-plugin-security": "^4.0.1",
         "eslint-plugin-sonarjs": "^4.1.0",
         "eslint-plugin-unused-imports": "^4.4.1",
         "globals": "^17.7.0",

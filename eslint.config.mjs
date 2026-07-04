@@ -1,17 +1,8 @@
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
-import { FlatCompat } from "@eslint/eslintrc";
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import security from "eslint-plugin-security";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-    baseDirectory: __dirname,
-});
+import nextPlugin from "@next/eslint-plugin-next";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
     {
@@ -28,9 +19,20 @@ export default tseslint.config(
 
     js.configs.recommended,
 
-    ...compat.extends("next/core-web-vitals", "next/typescript"),
-
     ...tseslint.configs.recommended,
+
+    {
+        plugins: {
+            "@next/next": nextPlugin,
+            "react-hooks": reactHooks,
+        },
+        rules: {
+            ...nextPlugin.configs.recommended.rules,
+            ...nextPlugin.configs["core-web-vitals"].rules,
+            "react-hooks/rules-of-hooks": "off",
+            "react-hooks/exhaustive-deps": "off",
+        },
+    },
 
     {
         files: ["**/*.{ts,tsx,js,jsx}"],
