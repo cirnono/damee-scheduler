@@ -16,6 +16,7 @@ jobs:
 
     steps:
       - name: Validate source branch
+        shell: bash
         run: |
           echo "Base branch: ${{ github.base_ref }}"
           echo "Head branch: ${{ github.head_ref }}"
