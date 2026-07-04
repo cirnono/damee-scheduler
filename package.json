@@ -1,36 +1,49 @@
 {
-  "name": "damee-scheduler",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc --noEmit",
-    "check:cycles": "madge --circular --extensions ts,tsx app components lib",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "audit": "pnpm audit --audit-level=critical"
-  },
-  "dependencies": {
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/utilities": "^3.2.2",
-    "next": "16.2.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.4",
-    "madge": "^8.0.0",
-    "tailwindcss": "^4",
-    "typescript": "^5",
-    "vitest": "^4.1.9"
-  },
-  "packageManager": "pnpm@10.12.2+sha512.a32540185b964ee30bb4e979e405adc6af59226b438ee4cc19f9e8773667a66d302f5bfee60a39d3cac69e35e4b96e708a71dd002b7e9359c4112a1722ac323f"
+    "name": "damee-scheduler",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "eslint .",
+        "typecheck": "tsc --noEmit",
+        "audit:prod": "pnpm audit --prod --audit-level high",
+        "audit:all": "pnpm audit --audit-level critical",
+        "ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm arch:cycles && pnpm test:coverage && pnpm audit:all && pnpm build"
+    },
+    "dependencies": {
+        "@dnd-kit/core": "^6.3.1",
+        "@dnd-kit/utilities": "^3.2.2",
+        "next": "16.2.4",
+        "react": "19.2.4",
+        "react-dom": "19.2.4"
+    },
+    "devDependencies": {
+        "@eslint/eslintrc": "^3.3.5",
+        "@eslint/js": "^10.0.1",
+        "@next/eslint-plugin-next": "^16.2.10",
+        "@tailwindcss/postcss": "^4",
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.2",
+        "@types/node": "^20",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "@vitest/coverage-v8": "^4.1.9",
+        "eslint": "^9",
+        "eslint-config-next": "16.2.4",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "eslint-plugin-sonarjs": "^4.1.0",
+        "eslint-plugin-unused-imports": "^4.4.1",
+        "globals": "^17.7.0",
+        "jsdom": "^29.1.1",
+        "madge": "^8.0.0",
+        "prettier": "^3.9.4",
+        "tailwindcss": "^4",
+        "typescript": "^5",
+        "typescript-eslint": "^8.62.1",
+        "vite-tsconfig-paths": "^6.1.1",
+        "vitest": "^4.1.9"
+    },
+    "packageManager": "pnpm@10.12.2+sha512.a32540185b964ee30bb4e979e405adc6af59226b438ee4cc19f9e8773667a66d302f5bfee60a39d3cac69e35e4b96e708a71dd002b7e9359c4112a1722ac323f"
 }
