@@ -440,6 +440,7 @@ export function ScheduleBoard({
   const [dragOverCell, setDragOverCell] = useState<SelectedCell | null>(null);
   const [highlightedDay, setHighlightedDay] = useState<WeekdayKey | null>(null);
   const [viewMode, setViewMode] = useState<"role" | "employee">("role");
+  const [draggerOpen, setDraggerOpen] = useState(false);
 
   const selectedDay = WEEKDAYS.find((day) => day.key === selectedCell?.day);
 
@@ -559,43 +560,62 @@ export function ScheduleBoard({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <section className="mb-5 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-4">
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="font-semibold text-neutral-100">员工拖拽栏</h2>
-              <p className="mt-1 text-xs text-neutral-500">
-                可拖员工到岗位，也可以拖动排班格里的员工移动或交换。点击星期标题可高亮当天还未安排的员工。
-              </p>
+        {/* Floating toggle button */}
+        <button
+          type="button"
+          onClick={() => setDraggerOpen((v) => !v)}
+          className="fixed right-4 top-20 z-30 flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900 text-neutral-300 shadow-lg hover:bg-neutral-800"
+          title={draggerOpen ? "收起员工拖拽栏" : "展开员工拖拽栏"}
+        >
+          <span className="text-sm font-bold">
+            {employees.length}
+          </span>
+        </button>
+
+        {/* Vertical floating panel */}
+        {draggerOpen && (
+          <div className="fixed right-4 top-32 z-30 flex max-h-[70vh] w-56 flex-col gap-2 overflow-y-auto rounded-2xl border border-neutral-700 bg-neutral-900/95 p-3 shadow-2xl backdrop-blur">
+            <div className="mb-1 flex items-center justify-between text-xs text-neutral-400">
+              <span>拖拽员工到排班格</span>
+              <button
+                type="button"
+                onClick={() => setDraggerOpen(false)}
+                className="rounded px-1.5 py-0.5 hover:bg-neutral-800"
+              >
+                ✕
+              </button>
             </div>
 
-            <span className="rounded-full border border-neutral-700 px-3 py-1 text-xs text-neutral-400">
-              {employees.length} 人
-            </span>
-          </div>
+            {employees.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-neutral-700 p-3 text-center text-xs text-neutral-500">
+                还没有员工
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {employees.map((employee) => {
+                  const isUnassignedOnHighlightedDay = highlightedDay
+                    ? !isEmployeeAssignedOnDay(
+                        cells,
+                        employee.id,
+                        highlightedDay,
+                      )
+                    : false;
 
-          {employees.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-neutral-700 p-5 text-center text-sm text-neutral-500">
-              还没有员工。请先在员工池中添加员工，或生成测试数据。
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {employees.map((employee) => {
-                const isUnassignedOnHighlightedDay = highlightedDay
-                  ? !isEmployeeAssignedOnDay(cells, employee.id, highlightedDay)
-                  : false;
-
-                return (
-                  <DraggableEmployeeChip
-                    key={employee.id}
-                    employee={employee}
-                    highlightedDay={highlightedDay}
-                    isUnassignedOnHighlightedDay={isUnassignedOnHighlightedDay}
-                  />
-                );
-              })}
+                  return (
+                    <DraggableEmployeeChip
+                      key={employee.id}
+                      employee={employee}
+                      highlightedDay={highlightedDay}
+                      isUnassignedOnHighlightedDay={
+                        isUnassignedOnHighlightedDay
+                      }
+                    />
+                  );
+                })}
             </div>
           )}
-        </section>
+        </div>
+      )}
 
         <div className="mb-5 flex items-center justify-center">
           <div className="inline-flex items-center gap-1 rounded-xl border border-neutral-700 bg-neutral-950 p-1">

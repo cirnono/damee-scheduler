@@ -14,24 +14,15 @@ type EmployeeManagerProps = {
   setStoreEmployeeIds: Dispatch<SetStateAction<StoreEmployeeMap>>;
   editOrder: Record<string, number>;
   onEmployeeEdited: (employeeId: string) => void;
-};
-
-type RawEmployeeImport = {
-  id?: string;
-  name?: string;
-  avatar?: string;
-  availabilityMode?: AvailabilityMode;
-  availableDays?: string[];
-  targetWorkDays?: number;
-  capableRoles?: string[];
-  preferredRoles?: string[];
-  avoidRoles?: string[];
-  hourlyRate?: number;
+  syncedEmployeeIds: Set<string>;
+  onSaveToCloud: () => void;
+  cloudSyncing: boolean;
+  cloudSyncMessage: string;
 };
 
 type EmployeeFilter = "all" | "active-store" | "not-active-store";
 
-const weekdayKeys = WEEKDAYS.map((day) => day.key);
+
 
 export function EmployeeManager({
   roles,
@@ -43,15 +34,17 @@ export function EmployeeManager({
   setStoreEmployeeIds,
   editOrder,
   onEmployeeEdited,
+  syncedEmployeeIds,
+  onSaveToCloud,
+  cloudSyncing,
+  cloudSyncMessage,
 }: EmployeeManagerProps) {
   const [newEmployeeName, setNewEmployeeName] = useState("");
-  const [jsonInput, setJsonInput] = useState("");
-  const [importError, setImportError] = useState("");
+  const [, setImportError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [filter, setFilter] = useState<EmployeeFilter>("all");
   const [expandedPreferenceEmployeeIds, setExpandedPreferenceEmployeeIds] =
     useState<string[]>([]);
-  const [jsonImportCollapsed, setJsonImportCollapsed] = useState(true);
   const [filterCollapsed, setFilterCollapsed] = useState(true);
   const [snapshotOrder] = useState<Record<string, number>>(() => ({
     ...editOrder,
@@ -316,109 +309,6 @@ export function EmployeeManager({
     });
   }
 
-  function normalizeImportedEmployee(
-    item: RawEmployeeImport,
-    index: number,
-  ): Employee {
-    const name = typeof item.name === "string" ? item.name.trim() : "";
-
-    if (!name) {
-      throw new Error(`第 ${index + 1} 个员工缺少 name`);
-    }
-
-    const availabilityMode: AvailabilityMode =
-      item.availabilityMode === "days-per-week"
-        ? "days-per-week"
-        : "specific-days";
-
-    const availableDays = Array.isArray(item.availableDays)
-      ? item.availableDays.filter(
-          (day): day is Employee["availableDays"][number] =>
-            weekdayKeys.includes(day as Employee["availableDays"][number]),
-        )
-      : [];
-
-    const filterRoles = (rawRoles: unknown) => {
-      return Array.isArray(rawRoles)
-        ? rawRoles.filter(
-            (role): role is string =>
-              typeof role === "string" && roles.includes(role),
-          )
-        : [];
-    };
-
-    const rawTargetWorkDays =
-      typeof item.targetWorkDays === "number" &&
-      Number.isFinite(item.targetWorkDays)
-        ? item.targetWorkDays
-        : 5;
-
-    const targetWorkDays = Math.max(
-      0,
-      Math.min(7, Math.round(rawTargetWorkDays)),
-    );
-
-    const rawHourlyRate =
-      typeof item.hourlyRate === "number" && Number.isFinite(item.hourlyRate)
-        ? Math.max(0, item.hourlyRate)
-        : undefined;
-
-    return {
-      id:
-        typeof item.id === "string" && item.id.trim()
-          ? item.id
-          : crypto.randomUUID(),
-      name,
-      avatar: typeof item.avatar === "string" ? item.avatar : "",
-      availabilityMode,
-      availableDays,
-      targetWorkDays,
-      capableRoles: filterRoles(item.capableRoles),
-      preferredRoles: filterRoles(item.preferredRoles),
-      avoidRoles: filterRoles(item.avoidRoles),
-      hourlyRate: rawHourlyRate,
-    };
-  }
-
-  function importEmployeesFromJson() {
-    setImportError("");
-
-    try {
-      const parsed = JSON.parse(jsonInput) as unknown;
-
-      if (!Array.isArray(parsed)) {
-        throw new Error('JSON 最外层必须是数组，例如 [{ "name": "张三" }]');
-      }
-
-      const importedEmployees = parsed.map((item, index) => {
-        if (!item || typeof item !== "object") {
-          throw new Error(`第 ${index + 1} 个员工格式不正确`);
-        }
-
-        return normalizeImportedEmployee(item as RawEmployeeImport, index);
-      });
-
-      setEmployeePool((current) => {
-        const existingIds = new Set(current.map((employee) => employee.id));
-        const dedupedImports = importedEmployees.map((employee) =>
-          existingIds.has(employee.id)
-            ? { ...employee, id: crypto.randomUUID() }
-            : employee,
-        );
-
-        addEmployeeIdsToCurrentStore(
-          dedupedImports.map((employee) => employee.id),
-        );
-
-        return [...current, ...dedupedImports];
-      });
-
-      setJsonInput("");
-    } catch (error) {
-      setImportError(error instanceof Error ? error.message : "JSON 导入失败");
-    }
-  }
-
   function generateTestEmployees() {
     const testEmployees: Employee[] = [
       {
@@ -538,33 +428,6 @@ export function EmployeeManager({
     setImportError("");
   }
 
-  const sampleJson = JSON.stringify(
-    [
-      {
-        name: "张三",
-        availabilityMode: "specific-days",
-        availableDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-        targetWorkDays: 5,
-        capableRoles: ["卤切", "卤收银", "后厨切"],
-        preferredRoles: ["后厨切"],
-        avoidRoles: [],
-        hourlyRate: 30,
-      },
-      {
-        name: "李四",
-        availabilityMode: "days-per-week",
-        availableDays: [],
-        targetWorkDays: 3,
-        capableRoles: ["豆", "肠粉"],
-        preferredRoles: ["豆"],
-        avoidRoles: ["肠粉"],
-        hourlyRate: 28,
-      },
-    ],
-    null,
-    2,
-  );
-
   function renderRoleButtons(
     employee: Employee,
     field: "capableRoles" | "preferredRoles" | "avoidRoles",
@@ -642,65 +505,22 @@ export function EmployeeManager({
           >
             生成测试数据
           </button>
+
+          <button
+            onClick={onSaveToCloud}
+            disabled={cloudSyncing}
+            className={
+              cloudSyncing
+                ? "rounded-xl border border-sky-700/40 bg-sky-950/20 px-4 py-2 text-sm font-semibold text-sky-400/60"
+                : "rounded-xl border border-sky-700 px-4 py-2 text-sm font-semibold text-sky-300 hover:bg-sky-950/40"
+            }
+          >
+            {cloudSyncing ? "保存中…" : "☁ 保存到云端"}
+          </button>
         </div>
       </div>
 
-      <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
-          <button
-            onClick={() => setJsonImportCollapsed((v) => !v)}
-            className="flex w-full items-center justify-between"
-          >
-            <h3 className="font-semibold text-neutral-100">
-              JSON 批量导入到员工池
-            </h3>
-            <span
-              className={`text-neutral-400 text-lg transition-transform duration-200 ${
-                jsonImportCollapsed ? "" : "rotate-90"
-              }`}
-            >
-              ▶
-            </span>
-          </button>
-
-          {!jsonImportCollapsed && (
-            <>
-              <p className="mt-1 text-xs text-neutral-500">
-                导入后会加入全局员工池，并自动勾选到当前门店。
-              </p>
-
-              <div className="mt-3">
-                <button
-                  onClick={() => setJsonInput(sampleJson)}
-                  className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-900"
-                >
-                  填入示例
-                </button>
-              </div>
-
-              <textarea
-                value={jsonInput}
-                onChange={(event) => setJsonInput(event.target.value)}
-                placeholder={sampleJson}
-                className="mt-3 min-h-44 w-full rounded-xl border border-neutral-800 bg-neutral-950 px-4 py-3 font-mono text-xs text-neutral-100 outline-none placeholder:text-neutral-700 focus:border-amber-500"
-              />
-
-              {importError ? (
-                <p className="mt-2 text-sm text-red-300">{importError}</p>
-              ) : null}
-
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={importEmployeesFromJson}
-                  className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400"
-                >
-                  导入 JSON
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
+      <div className="mb-6">
         <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 p-4">
           <button
             onClick={() => setFilterCollapsed((v) => !v)}
@@ -800,6 +620,18 @@ export function EmployeeManager({
                           ? `已加入 ${activeStoreName}`
                           : `加入 ${activeStoreName}`}
                       </button>
+
+                      <span
+                        className={
+                          syncedEmployeeIds.has(employee.id)
+                            ? "rounded-full border border-emerald-700 px-2 py-0.5 text-[10px] text-emerald-400"
+                            : "rounded-full border border-amber-700 px-2 py-0.5 text-[10px] text-amber-400"
+                        }
+                      >
+                        {syncedEmployeeIds.has(employee.id)
+                          ? "云端"
+                          : "本地"}
+                      </span>
                     </div>
 
                     <p className="mt-1 text-xs text-neutral-500">
