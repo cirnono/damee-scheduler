@@ -1,34 +1,35 @@
 name: Guard Main PR Source
 
 on:
-  pull_request:
-    branches:
-      - main
+    pull_request:
+        branches:
+            - main
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  guard:
-    name: Main PR must come from dev or hotfix
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    guard:
+        name: Main PR must come from dev or hotfix
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
 
-    steps:
-      - name: Validate source branch
-        run: |
-          echo "Base branch: ${{ github.base_ref }}"
-          echo "Head branch: ${{ github.head_ref }}"
+        steps:
+            - name: Validate source branch
+              shell: bash
+              run: |
+                  echo "Base branch: ${{ github.base_ref }}"
+                  echo "Head branch: ${{ github.head_ref }}"
 
-          if [[ "${{ github.head_ref }}" == "dev" ]]; then
-            echo "Allowed: dev -> main"
-            exit 0
-          fi
+                  if [[ "${{ github.head_ref }}" == "dev" ]]; then
+                    echo "Allowed: dev -> main"
+                    exit 0
+                  fi
 
-          if [[ "${{ github.head_ref }}" == hotfix/* ]]; then
-            echo "Allowed: hotfix/* -> main"
-            exit 0
-          fi
+                  if [[ "${{ github.head_ref }}" == hotfix/* ]]; then
+                    echo "Allowed: hotfix/* -> main"
+                    exit 0
+                  fi
 
-          echo "Only dev or hotfix/* branches can open PRs into main."
-          exit 1
+                  echo "Only dev or hotfix/* branches can open PRs into main."
+                  exit 1

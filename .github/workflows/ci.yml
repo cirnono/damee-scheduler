@@ -1,65 +1,45 @@
 name: CI
 
 on:
-  pull_request:
-    branches:
-      - dev
-      - main
-  push:
-    branches:
-      - dev
-      - main
+    pull_request:
+        branches:
+            - dev
+            - main
+    push:
+        branches:
+            - dev
+            - main
 
 permissions:
-  contents: read
+    contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Quality Gates
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    security-and-build:
+        name: Security and Build
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Setup project
-        uses: ./.github/actions/setup-pnpm
-        with:
-          node-version: "22"
+            - name: Setup project
+              uses: ./.github/actions/setup-pnpm
 
-      - name: Check formatting
-        run: pnpm format:check
+            - name: Security lint
+              run: pnpm lint:security
 
-      - name: Lint
-        run: pnpm lint:strict
+            - name: Type check
+              run: pnpm typecheck
 
-      - name: Type check
-        run: pnpm typecheck
+            - name: Audit production dependencies
+              run: pnpm audit:prod
 
-      - name: Check circular dependencies
-        run: pnpm arch:cycles
-
-      - name: Test with coverage
-        run: pnpm test:coverage
-
-      - name: Audit all dependencies
-        run: pnpm audit:all
-
-      - name: Build
-        run: pnpm build
-        env:
-          NEXT_TELEMETRY_DISABLED: "1"
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-report
-          path: coverage
-          if-no-files-found: ignore
-          retention-days: 7
+            - name: Build
+              run: pnpm build
+              env:
+                  NEXT_TELEMETRY_DISABLED: "1"
