@@ -58,6 +58,7 @@ export function ScheduleIssuesPanel({
   employees,
   onAssignEmployee,
 }: ScheduleIssuesPanelProps) {
+  const [panelCollapsed, setPanelCollapsed] = useState(true);
   const [expandedIssueId, setExpandedIssueId] = useState<string | null>(null);
 
   const errorCount = issues.filter(
@@ -69,15 +70,13 @@ export function ScheduleIssuesPanel({
 
   return (
     <section className="mb-5 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-4">
-      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
+      <button
+        type="button"
+        onClick={() => setPanelCollapsed((v) => !v)}
+        className="flex w-full items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
           <h2 className="font-semibold text-neutral-100">排班检查</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            自动检查空缺、岗位能力、上班日期和重复安排。点击可处理的提醒可以直接安排员工。
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
           <span className="rounded-full border border-red-900/70 px-3 py-1 text-xs text-red-300">
             错误 {errorCount}
           </span>
@@ -85,7 +84,20 @@ export function ScheduleIssuesPanel({
             提醒 {warningCount}
           </span>
         </div>
-      </div>
+        <span
+          className={`text-neutral-400 text-lg transition-transform duration-200 ${
+            panelCollapsed ? "" : "rotate-90"
+          }`}
+        >
+          ▶
+        </span>
+      </button>
+
+      {!panelCollapsed && (
+        <>
+          <p className="mt-3 mb-3 text-xs text-neutral-500">
+            自动检查空缺、岗位能力、上班日期和重复安排。点击可处理的提醒可以直接安排员工。
+          </p>
 
       {issues.length === 0 ? (
         <div className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 px-4 py-3 text-sm text-emerald-300">
@@ -215,6 +227,8 @@ export function ScheduleIssuesPanel({
             );
           })}
         </div>
+      )}
+        </>
       )}
     </section>
   );
