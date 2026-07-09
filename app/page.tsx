@@ -39,6 +39,16 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { Header } from "@/components/Header";
 import { StoreRulesPanel } from "@/components/StoreRulesPanel";
 import {
+<<<<<<< HEAD
+  listEmployees,
+  createEmployee,
+  updateEmployee,
+  deleteEmployee,
+  updateEmployeeStores,
+} from "@/lib/api-client";
+import {
+=======
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
   buildWeekDates,
   getDateDiffInDays,
   getNextMondayDateInputValue,
@@ -160,7 +170,10 @@ export default function Home() {
   const [weekStartDate, setWeekStartDate] = useState(
     getNextMondayDateInputValue,
   );
+<<<<<<< HEAD
+=======
 
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
   const backupFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeStore =
@@ -208,6 +221,28 @@ export default function Home() {
     const nextMonday = getNextMondayDateInputValue();
     const today = getTodayDateInputValue();
 
+<<<<<<< HEAD
+    const savedEmployeePool = loadFromStorage<Employee[]>(
+      STORAGE_KEYS.employeePool,
+      [],
+    );
+
+    const savedStoreEmployeeIds = loadFromStorage<StoreEmployeeMap>(
+      STORAGE_KEYS.storeEmployeeIds,
+      createEmptyStoreEmployeeMap(),
+    );
+
+    const savedStoreRules = loadFromStorage<StoreRuleMap>(
+      STORAGE_KEYS.storeRules,
+      createEmptyStoreRuleMap(),
+    );
+
+    const savedLegacySchedulePlans = loadFromStorage<SchedulePlanMap>(
+      STORAGE_KEYS.schedulePlans,
+      createEmptyPlanMap(),
+    );
+
+=======
     const legacyEmployees = loadFromStorage<Employee[]>(
       STORAGE_KEYS.employees,
       [],
@@ -233,6 +268,7 @@ export default function Home() {
       createEmptyPlanMap(),
     );
 
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
     const savedSchedulePlansByWeek = loadFromStorage<SchedulePlansByWeek>(
       STORAGE_KEYS.schedulePlansByWeek,
       createEmptySchedulePlansByWeek(),
@@ -277,6 +313,8 @@ export default function Home() {
       ...savedStoreEmployeeIds,
     };
 
+<<<<<<< HEAD
+=======
     /**
      * 兼容旧版本：
      * 如果之前只有 employees，没有员工池和门店选择，则默认全部加入当前门店。
@@ -292,6 +330,7 @@ export default function Home() {
       };
     }
 
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
     // Data synchronization from localStorage — runs once on mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEmployeePool(savedEmployeePool.map(normalizeEmployee));
@@ -308,6 +347,140 @@ export default function Home() {
     setHasLoadedStorage(true);
   }, []);
 
+<<<<<<< HEAD
+  // ─── API sync: load employees on mount ─────────────────
+  useEffect(() => {
+    listEmployees()
+      .then((apiEmployees) => {
+        if (apiEmployees.length === 0) return;
+
+        const mapped: Employee[] = apiEmployees.map((e) => ({
+          id: e.id,
+          name: e.name,
+          avatar: e.avatar ?? "",
+          availabilityMode: e.availabilityMode,
+          availableDays: e.availableDays,
+          targetWorkDays: e.targetWorkDays,
+          capableRoles: e.capableRoles,
+          preferredRoles: e.preferredRoles,
+          avoidRoles: e.avoidRoles,
+          hourlyRate: e.hourlyRate ?? undefined,
+        }));
+
+        setEmployeePool(mapped);
+        setSyncedEmployeeIds(new Set(apiEmployees.map((e) => e.id)));
+
+        const ids: StoreEmployeeMap = {};
+        for (const e of apiEmployees) {
+          for (const sid of e.storeIds) {
+            if (!ids[sid]) ids[sid] = [];
+            ids[sid].push(e.id);
+          }
+        }
+        if (Object.keys(ids).length > 0) {
+          setStoreEmployeeIds(ids);
+        }
+      })
+      .catch(() => {
+        // API unavailable — keep localStorage data
+      });
+  }, []);
+
+  // ─── Backend connection status ─────────────────────────
+  const [backendConnected, setBackendConnected] = useState<
+    boolean | null
+  >(null);
+
+  const browserSchedulerApi =
+    process.env.NEXT_PUBLIC_SCHEDULER_API ?? "/api/v1/scheduler";
+  const serverSchedulerApi =
+    process.env.SERVER_SCHEDULER_API ??
+    "http://localhost:3001/api/v1/scheduler";
+  const SCHEDULER_API =
+    typeof window === "undefined" ? serverSchedulerApi : browserSchedulerApi;
+
+  function checkBackend() {
+    fetch(`${SCHEDULER_API}/employees`, { method: "HEAD" })
+      .then(() => setBackendConnected(true))
+      .catch(() => setBackendConnected(false));
+  }
+
+  useEffect(() => {
+    checkBackend();
+  }, []);
+
+  // ─── Cloud sync state ──────────────────────────────────
+  const [syncedEmployeeIds, setSyncedEmployeeIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [cloudSyncing, setCloudSyncing] = useState(false);
+  const [cloudSyncMessage, setCloudSyncMessage] = useState("");
+
+  async function saveToCloud() {
+    setCloudSyncing(true);
+    setCloudSyncMessage("");
+
+    const synced = new Set<string>(syncedEmployeeIds);
+
+    for (const emp of employeePool) {
+      try {
+        if (synced.has(emp.id)) {
+          // Already exists on server — PATCH
+          await updateEmployee(emp.id, {
+            name: emp.name,
+            avatar: emp.avatar || null,
+            availabilityMode: emp.availabilityMode,
+            availableDays: emp.availableDays,
+            targetWorkDays: emp.targetWorkDays,
+            capableRoles: emp.capableRoles,
+            preferredRoles: emp.preferredRoles,
+            avoidRoles: emp.avoidRoles,
+            hourlyRate: emp.hourlyRate ?? null,
+          });
+        } else {
+          // New employee — CREATE
+          await createEmployee({
+            name: emp.name,
+            avatar: emp.avatar || null,
+            availabilityMode: emp.availabilityMode,
+            availableDays: emp.availableDays,
+            targetWorkDays: emp.targetWorkDays,
+            capableRoles: emp.capableRoles,
+            preferredRoles: emp.preferredRoles,
+            avoidRoles: emp.avoidRoles,
+            hourlyRate: emp.hourlyRate ?? null,
+            storeIds: storeEmployeeIds[activeStoreId]?.includes(emp.id)
+              ? [activeStoreId]
+              : [],
+          });
+        }
+        synced.add(emp.id);
+      } catch {
+        setCloudSyncMessage(`同步失败: ${emp.name}`);
+        setCloudSyncing(false);
+        return;
+      }
+    }
+
+    setSyncedEmployeeIds(synced);
+    setCloudSyncing(false);
+    setCloudSyncMessage("✓ 已保存到云端");
+  }
+
+  // ─── API sync: storeEmployeeIds → update store assignments for synced employees ─
+  useEffect(() => {
+    if (!hasLoadedStorage || syncedEmployeeIds.size === 0) return;
+
+    const activeIds = storeEmployeeIds[activeStoreId] ?? [];
+    for (const emp of employeePool) {
+      if (!syncedEmployeeIds.has(emp.id)) continue;
+      const shouldBeInStore = activeIds.includes(emp.id);
+      const apiStoreIds = shouldBeInStore ? [activeStoreId] : [];
+      updateEmployeeStores(emp.id, apiStoreIds).catch(() => {});
+    }
+  }, [storeEmployeeIds, hasLoadedStorage]);
+
+=======
   useEffect(() => {
     if (!hasLoadedStorage) return;
 
@@ -320,6 +493,7 @@ export default function Home() {
     saveToStorage(STORAGE_KEYS.storeEmployeeIds, storeEmployeeIds);
   }, [storeEmployeeIds, hasLoadedStorage]);
 
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
   useEffect(() => {
     if (!hasLoadedStorage) return;
 
@@ -835,6 +1009,72 @@ export default function Home() {
 
   return (
     <AuthGuard>
+<<<<<<< HEAD
+      <Header
+        activeStoreId={activeStoreId}
+        activePlanId={activePlanId}
+        onStoreChange={handleStoreChange}
+        onPlanChange={handlePlanChange}
+        onGenerate={handleGenerateSchedule}
+        onOpenEmployeePool={() => setShowEmployeePanel(true)}
+        onOpenStats={() => setShowStatsPanel(true)}
+        onOpenRules={() => setShowRulesPanel(true)}
+        onOpenBackup={() => setShowBackupPanel(true)}
+        onCopyPlan={handleCopyCurrentPlanTo}
+        onReset={handleResetSchedule}
+        onRefreshBackend={checkBackend}
+        backendConnected={backendConnected}
+        cloudSyncMessage={cloudSyncMessage}
+        stores={STORE_CONFIGS}
+        plans={PLAN_OPTIONS}
+      />
+      <main className="min-h-screen bg-neutral-950 text-neutral-50">
+        <section className="mx-auto max-w-7xl px-6 py-8">
+          {/* Status bar */}
+          <div className="mb-2 rounded-2xl border border-neutral-800 bg-neutral-900/60 px-4 py-2.5 text-xs text-neutral-400 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>
+              门店 <span className="text-neutral-100 font-medium">{activeStore.name}</span>
+            </span>
+            <span className="text-neutral-700">|</span>
+            <span>
+              方案 <span className="text-neutral-100 font-medium">{activePlan.name}</span>
+            </span>
+            <span className="text-neutral-700">|</span>
+            <span>
+              今天 <span className="text-neutral-100">{todayValue}</span>
+            </span>
+            <span className="text-neutral-700">|</span>
+            <span>
+              周 <span className="text-neutral-100">
+                {weekDates[0]?.dateLabel} – {weekDates[6]?.dateLabel}
+              </span>
+            </span>
+            <span className="text-neutral-700">|</span>
+            <span>
+              已安排 <span className="text-neutral-100">
+                {activeScheduleCells.filter((c) => c.employeeId).length}/{activeStoreRoles.length * 7}
+              </span>
+            </span>
+            <span className="text-neutral-700">|</span>
+            <span>
+              员工 <span className="text-neutral-100">{activeEmployees.length}</span>
+              /<span className="text-neutral-100">{employeePool.length}</span>
+            </span>
+          </div>
+
+          {/* Week picker */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 rounded-xl border border-neutral-700 bg-white px-3 py-2 text-sm text-neutral-500">
+              <span className="text-xs">周一</span>
+              <input
+                type="date"
+                value={weekStartDate}
+                onChange={(event) =>
+                  setWeekStartDate(
+                    normalizeToMondayDateInputValue(event.target.value),
+                  )
+                }
+=======
       <Header />
       <main className="min-h-screen bg-neutral-950 text-neutral-50">
         <section className="mx-auto max-w-7xl px-6 py-8">
@@ -968,6 +1208,7 @@ export default function Home() {
                     normalizeToMondayDateInputValue(event.target.value),
                   );
                 }}
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
                 className="border-none bg-transparent text-sm text-neutral-900 outline-none"
               />
             </label>
@@ -976,6 +1217,12 @@ export default function Home() {
                 setTodayValue(getTodayDateInputValue());
                 setWeekStartDate(getNextMondayDateInputValue());
               }}
+<<<<<<< HEAD
+              className="rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
+            >
+              回到下周
+            </button>
+=======
               className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
             >
               回到下周
@@ -994,6 +1241,7 @@ export default function Home() {
               {" "}
               / {activeStoreRoles.length * 7}
             </span>
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
           </div>
 
           {copyPlanMessage ? (
@@ -1247,6 +1495,13 @@ export default function Home() {
                   setStoreEmployeeIds={setStoreEmployeeIds}
                   editOrder={editOrder}
                   onEmployeeEdited={handleEmployeeEdited}
+<<<<<<< HEAD
+                  syncedEmployeeIds={syncedEmployeeIds}
+                  onSaveToCloud={saveToCloud}
+                  cloudSyncing={cloudSyncing}
+                  cloudSyncMessage={cloudSyncMessage}
+=======
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
                 />
               </div>
             </div>
