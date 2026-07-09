@@ -39,6 +39,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { Header } from "@/components/Header";
 import { StoreRulesPanel } from "@/components/StoreRulesPanel";
 import {
+<<<<<<< HEAD
   listEmployees,
   createEmployee,
   updateEmployee,
@@ -46,6 +47,8 @@ import {
   updateEmployeeStores,
 } from "@/lib/api-client";
 import {
+=======
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
   buildWeekDates,
   getDateDiffInDays,
   getNextMondayDateInputValue,
@@ -167,6 +170,10 @@ export default function Home() {
   const [weekStartDate, setWeekStartDate] = useState(
     getNextMondayDateInputValue,
   );
+<<<<<<< HEAD
+=======
+
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
   const backupFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeStore =
@@ -214,6 +221,7 @@ export default function Home() {
     const nextMonday = getNextMondayDateInputValue();
     const today = getTodayDateInputValue();
 
+<<<<<<< HEAD
     const savedEmployeePool = loadFromStorage<Employee[]>(
       STORAGE_KEYS.employeePool,
       [],
@@ -234,6 +242,33 @@ export default function Home() {
       createEmptyPlanMap(),
     );
 
+=======
+    const legacyEmployees = loadFromStorage<Employee[]>(
+      STORAGE_KEYS.employees,
+      [],
+    );
+
+    const savedEmployeePool = loadFromStorage<Employee[]>(
+      STORAGE_KEYS.employeePool,
+      legacyEmployees,
+    );
+
+    const savedStoreEmployeeIds = loadFromStorage<StoreEmployeeMap>(
+      STORAGE_KEYS.storeEmployeeIds,
+      createEmptyStoreEmployeeMap(),
+    );
+
+    const savedStoreRules = loadFromStorage<StoreRuleMap>(
+      STORAGE_KEYS.storeRules,
+      createEmptyStoreRuleMap(),
+    );
+
+    const savedLegacySchedulePlans = loadFromStorage<SchedulePlanMap>(
+      STORAGE_KEYS.schedulePlans,
+      createEmptyPlanMap(),
+    );
+
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
     const savedSchedulePlansByWeek = loadFromStorage<SchedulePlansByWeek>(
       STORAGE_KEYS.schedulePlansByWeek,
       createEmptySchedulePlansByWeek(),
@@ -278,6 +313,24 @@ export default function Home() {
       ...savedStoreEmployeeIds,
     };
 
+<<<<<<< HEAD
+=======
+    /**
+     * 兼容旧版本：
+     * 如果之前只有 employees，没有员工池和门店选择，则默认全部加入当前门店。
+     */
+    if (
+      savedEmployeePool.length > 0 &&
+      (nextStoreEmployeeIds[nextStoreId]?.length ?? 0) === 0 &&
+      legacyEmployees.length > 0
+    ) {
+      nextStoreEmployeeIds = {
+        ...nextStoreEmployeeIds,
+        [nextStoreId]: savedEmployeePool.map((employee) => employee.id),
+      };
+    }
+
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
     // Data synchronization from localStorage — runs once on mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEmployeePool(savedEmployeePool.map(normalizeEmployee));
@@ -294,6 +347,7 @@ export default function Home() {
     setHasLoadedStorage(true);
   }, []);
 
+<<<<<<< HEAD
   // ─── API sync: load employees on mount ─────────────────
   useEffect(() => {
     listEmployees()
@@ -426,6 +480,20 @@ export default function Home() {
     }
   }, [storeEmployeeIds, hasLoadedStorage]);
 
+=======
+  useEffect(() => {
+    if (!hasLoadedStorage) return;
+
+    saveToStorage(STORAGE_KEYS.employeePool, employeePool);
+  }, [employeePool, hasLoadedStorage]);
+
+  useEffect(() => {
+    if (!hasLoadedStorage) return;
+
+    saveToStorage(STORAGE_KEYS.storeEmployeeIds, storeEmployeeIds);
+  }, [storeEmployeeIds, hasLoadedStorage]);
+
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
   useEffect(() => {
     if (!hasLoadedStorage) return;
 
@@ -941,6 +1009,7 @@ export default function Home() {
 
   return (
     <AuthGuard>
+<<<<<<< HEAD
       <Header
         activeStoreId={activeStoreId}
         activePlanId={activePlanId}
@@ -1005,6 +1074,141 @@ export default function Home() {
                     normalizeToMondayDateInputValue(event.target.value),
                   )
                 }
+=======
+      <Header />
+      <main className="min-h-screen bg-neutral-950 text-neutral-50">
+        <section className="mx-auto max-w-7xl px-6 py-8">
+          <header className="mb-8 flex flex-col gap-4 border-b border-neutral-800 pb-6 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="mb-2 text-sm font-medium text-amber-400">
+                Damee Scheduler
+              </p>
+              <h1 className="text-3xl font-bold tracking-tight">
+                员工排班工具
+              </h1>
+              <p className="mt-2 text-sm text-neutral-400">
+                员工池、多门店选择、自动生成和拖拽调整排班。
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <select
+                value={activeStoreId}
+                onChange={(event) => handleStoreChange(event.target.value)}
+                className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-2 text-sm text-neutral-200 outline-none hover:bg-neutral-900 focus:border-amber-500"
+              >
+                {STORE_CONFIGS.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={activePlanId}
+                onChange={(event) => handlePlanChange(event.target.value)}
+                className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-2 text-sm text-neutral-200 outline-none hover:bg-neutral-900 focus:border-amber-500"
+              >
+                {PLAN_OPTIONS.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={handleGenerateSchedule}
+                className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400"
+              >
+                生成排班
+              </button>
+
+              <button
+                onClick={() => setShowBackupPanel(true)}
+                className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
+              >
+                数据 / 导入导出
+              </button>
+
+              <button
+                onClick={() => setShowEmployeePanel(true)}
+                className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
+              >
+                员工池
+              </button>
+
+              <button
+                onClick={() => setShowStatsPanel(true)}
+                className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
+              >
+                员工统计
+              </button>
+
+              <button
+                onClick={() => setShowRulesPanel(true)}
+                className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
+              >
+                门店规则
+              </button>
+
+              <div className="flex flex-wrap gap-2 rounded-xl border border-neutral-700 bg-white p-1">
+                {PLAN_OPTIONS.filter((plan) => plan.id !== activePlanId).map(
+                  (plan) => (
+                    <button
+                      key={plan.id}
+                      onClick={() => handleCopyCurrentPlanTo(plan.id)}
+                      className="rounded-lg px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
+                    >
+                      复制到{plan.name}
+                    </button>
+                  ),
+                )}
+              </div>
+
+              <button
+                onClick={handleResetSchedule}
+                className="rounded-xl border border-red-900/70 px-4 py-2 text-sm text-red-300 hover:bg-red-950/40"
+              >
+                Reset 当前方案
+              </button>
+            </div>
+          </header>
+
+          <div className="mb-4 rounded-2xl border border-neutral-800 bg-neutral-900/60 px-4 py-3 text-sm text-neutral-400">
+            当前门店：
+            <span className="text-neutral-100">{activeStore.name}</span>
+            <span className="mx-2 text-neutral-700">/</span>
+            当前方案：
+            <span className="text-neutral-100">{activePlan.name}</span>
+            <span className="mx-2 text-neutral-700">/</span>
+            <span className="mx-2 text-neutral-700">/</span>
+            今天：
+            <span className="text-neutral-100">{todayValue}</span>
+            <span className="mx-2 text-neutral-700">/</span>
+            排班周：
+            <span className="text-neutral-100">
+              {weekDates[0]?.dateLabel} - {weekDates[6]?.dateLabel}
+            </span>
+            <span className="mx-2 text-neutral-700">/</span>
+            本周方案数：
+            <span className="text-neutral-100">
+              {
+                Object.values(activeWeekSchedulePlans).filter(
+                  (plan) => plan.cells.length > 0,
+                ).length
+              }
+            </span>
+            <label className="flex items-center gap-2 rounded-xl border border-neutral-700 bg-white px-3 py-2 text-sm text-neutral-500">
+              <span>周一</span>
+              <input
+                type="date"
+                value={weekStartDate}
+                onChange={(event) => {
+                  setWeekStartDate(
+                    normalizeToMondayDateInputValue(event.target.value),
+                  );
+                }}
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
                 className="border-none bg-transparent text-sm text-neutral-900 outline-none"
               />
             </label>
@@ -1013,10 +1217,31 @@ export default function Home() {
                 setTodayValue(getTodayDateInputValue());
                 setWeekStartDate(getNextMondayDateInputValue());
               }}
+<<<<<<< HEAD
               className="rounded-xl border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
             >
               回到下周
             </button>
+=======
+              className="rounded-xl border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
+            >
+              回到下周
+            </button>
+            门店员工：
+            <span className="text-neutral-100">{activeEmployees.length}</span>
+            <span className="mx-2 text-neutral-700">/</span>
+            员工池：
+            <span className="text-neutral-100">{employeePool.length}</span>
+            <span className="mx-2 text-neutral-700">/</span>
+            已安排岗位：
+            <span className="text-neutral-100">
+              {activeScheduleCells.filter((cell) => cell.employeeId).length}
+            </span>
+            <span className="text-neutral-500">
+              {" "}
+              / {activeStoreRoles.length * 7}
+            </span>
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
           </div>
 
           {copyPlanMessage ? (
@@ -1270,10 +1495,13 @@ export default function Home() {
                   setStoreEmployeeIds={setStoreEmployeeIds}
                   editOrder={editOrder}
                   onEmployeeEdited={handleEmployeeEdited}
+<<<<<<< HEAD
                   syncedEmployeeIds={syncedEmployeeIds}
                   onSaveToCloud={saveToCloud}
                   cloudSyncing={cloudSyncing}
                   cloudSyncMessage={cloudSyncMessage}
+=======
+>>>>>>> 67853f631756b6e070936d01dcd194ed31d0c10f
                 />
               </div>
             </div>
